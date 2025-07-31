@@ -4,23 +4,19 @@ variable "location" {
   nullable    = false
 }
 
-variable "name" {
-  type        = string
-  description = "The name of the this resource."
-
-  validation {
-    condition     = can(regex("TODO", var.name))
-    error_message = "The name must be TODO." # TODO remove the example below once complete:
-    #condition     = can(regex("^[a-z0-9]{5,50}$", var.name))
-    #error_message = "The name must be between 5 and 50 characters long and can only contain lowercase letters and numbers."
-  }
-}
 
 # This is required for most resource modules
-variable "resource_group_name" {
+# variable "resource_group_name" {
+#   type        = string
+#   description = "The resource group where the resources will be deployed."
+# }
+
+# This is required for most resource modules
+variable "resource_group_id" {
   type        = string
-  description = "The resource group where the resources will be deployed."
+  description = "The resource group id where the resources will be deployed."
 }
+
 
 # required AVM interfaces
 # remove only if not supported by the resource
@@ -234,4 +230,45 @@ variable "tags" {
   type        = map(string)
   default     = null
   description = "(Optional) Tags of the resource."
+}
+
+# name of the capacity reservation group
+variable "capacity_reservation_group_name" {
+  type        = string
+  description = "The name of the capacity reservation group. This must be unique within the resource group."
+}
+
+# schema validation enabled
+variable "schema_validation_enabled" {
+  type        = bool
+  default     = true
+  description = "Whether to enable schema validation for the AzAPI resource type and body. Defaults to true."
+}
+
+# zones for the capacity reservation group
+variable "zones" {
+  type        = list(string)
+  description = "A list of availability zones in which the capacity reservation group should be created."
+  default     = ["1", "2", "3"]
+}
+
+# subscription ID for azurerm provider
+variable "subscription_id" {
+  type        = string
+  description = "The subscription ID to use for the azurerm provider."
+  default     = ""
+}
+
+# sharing profile variable
+variable "sharing_profile" {
+  type = object({
+    subscription_ids = list(object({
+      id = string
+    }))
+  })
+  default     = null
+  description = <<DESCRIPTION
+An object representing the sharing profile for the capacity reservation group. This includes the following properties:
+- `subscription_ids` - A list of objects, each containing an `id` property that represents the subscription ID to share the capacity reservation group with.
+DESCRIPTION
 }
