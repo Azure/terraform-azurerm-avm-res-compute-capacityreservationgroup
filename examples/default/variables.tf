@@ -9,8 +9,8 @@ DESCRIPTION
 }
 
 # subscription ID for azurerm provider
-variable "subscription_id" {
-  type        = string
-  description = "The subscription ID to use for the azurerm provider."
-  default     = ""
-}
+# variable "subscription_id" {
+#   type        = string
+#   description = "The subscription ID to use for the azurerm provider."
+#   default     = ""
+# }
