@@ -22,7 +22,6 @@ variable "resource_group_id" {
   description = "The resource group id where the resources will be deployed."
 }
 
-
 variable "enable_telemetry" {
   type        = bool
   default     = true
@@ -68,7 +67,6 @@ Controls the Managed Identity configuration on this resource. The following prop
 DESCRIPTION
   nullable    = false
 }
-
 
 variable "role_assignments" {
   type = map(object({
