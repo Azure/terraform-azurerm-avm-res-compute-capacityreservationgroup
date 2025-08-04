@@ -23,11 +23,8 @@ The following requirements are needed by this module:
 
 The following resources are used by this module:
 
+- [azapi_resource.capacity_reservation_group](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/resource) (resource)
 - [azurerm_management_lock.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/management_lock) (resource)
-- [azurerm_private_endpoint.this_managed_dns_zone_groups](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/private_endpoint) (resource)
-- [azurerm_private_endpoint.this_unmanaged_dns_zone_groups](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/private_endpoint) (resource)
-- [azurerm_private_endpoint_application_security_group_association.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/private_endpoint_application_security_group_association) (resource)
-- [azurerm_resource_group.TODO](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/resource_group) (resource)
 - [azurerm_role_assignment.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) (resource)
 - [modtm_telemetry.telemetry](https://registry.terraform.io/providers/azure/modtm/latest/docs/resources/telemetry) (resource)
 - [random_uuid.telemetry](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/uuid) (resource)
@@ -39,21 +36,21 @@ The following resources are used by this module:
 
 The following input variables are required:
 
+### <a name="input_capacity_reservation_group_name"></a> [capacity\_reservation\_group\_name](#input\_capacity\_reservation\_group\_name)
+
+Description: The name of the capacity reservation group. This must be unique within the resource group.
+
+Type: `string`
+
 ### <a name="input_location"></a> [location](#input\_location)
 
 Description: Azure region where the resource should be deployed.
 
 Type: `string`
 
-### <a name="input_name"></a> [name](#input\_name)
+### <a name="input_resource_group_id"></a> [resource\_group\_id](#input\_resource\_group\_id)
 
-Description: The name of the this resource.
-
-Type: `string`
-
-### <a name="input_resource_group_name"></a> [resource\_group\_name](#input\_resource\_group\_name)
-
-Description: The resource group where the resources will be deployed.
+Description: The resource group id where the resources will be deployed.
 
 Type: `string`
 
@@ -261,6 +258,39 @@ map(object({
 
 Default: `{}`
 
+### <a name="input_schema_validation_enabled"></a> [schema\_validation\_enabled](#input\_schema\_validation\_enabled)
+
+Description: Whether to enable schema validation for the AzAPI resource type and body. Defaults to true.
+
+Type: `bool`
+
+Default: `true`
+
+### <a name="input_sharing_profile"></a> [sharing\_profile](#input\_sharing\_profile)
+
+Description: An object representing the sharing profile for the capacity reservation group. This includes the following properties:
+- `subscription_ids` - A list of objects, each containing an `id` property that represents the subscription ID to share the capacity reservation group with.
+
+Type:
+
+```hcl
+object({
+    subscription_ids = list(object({
+      id = string
+    }))
+  })
+```
+
+Default: `null`
+
+### <a name="input_subscription_id"></a> [subscription\_id](#input\_subscription\_id)
+
+Description: The subscription ID to use for the azurerm provider.
+
+Type: `string`
+
+Default: `""`
+
 ### <a name="input_tags"></a> [tags](#input\_tags)
 
 Description: (Optional) Tags of the resource.
@@ -269,13 +299,29 @@ Type: `map(string)`
 
 Default: `null`
 
+### <a name="input_zones"></a> [zones](#input\_zones)
+
+Description: A list of availability zones in which the capacity reservation group should be created.
+
+Type: `list(string)`
+
+Default:
+
+```json
+[
+  "1",
+  "2",
+  "3"
+]
+```
+
 ## Outputs
 
 The following outputs are exported:
 
-### <a name="output_private_endpoints"></a> [private\_endpoints](#output\_private\_endpoints)
+### <a name="output_capacity_reservation_group_id"></a> [capacity\_reservation\_group\_id](#output\_capacity\_reservation\_group\_id)
 
-Description:   A map of the private endpoints created.
+Description: The ID of the capacity reservation group
 
 ## Modules
 

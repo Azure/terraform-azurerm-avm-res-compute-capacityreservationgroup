@@ -5,30 +5,6 @@
 This deploys the module in its simplest form.
 
 ```hcl
-terraform {
-  required_version = "~> 1.5"
-
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 4.21"
-    }
-    modtm = {
-      source  = "azure/modtm"
-      version = "~> 0.3"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.5"
-    }
-  }
-}
-
-provider "azurerm" {
-  features {}
-}
-
-
 ## Section to provide a random Azure region for the resource group
 # This allows us to randomize the region for the resource group.
 module "regions" {
@@ -55,19 +31,29 @@ resource "azurerm_resource_group" "this" {
   name     = module.naming.resource_group.name_unique
 }
 
-# This is the module call
-# Do not specify location here due to the randomization above.
-# Leaving location as `null` will cause the module to use the resource group location
-# with a data source.
-module "test" {
+# This is the module call for capacity reservation group
+module "capacity_reservation_group" {
   source = "../../"
 
-  # source             = "Azure/avm-<res/ptn>-<name>/azurerm"
-  # ...
-  location            = azurerm_resource_group.this.location
-  name                = "TODO" # TODO update with module.naming.<RESOURCE_TYPE>.name_unique
-  resource_group_name = azurerm_resource_group.this.name
-  enable_telemetry    = var.enable_telemetry # see variables.tf
+  capacity_reservation_group_name = local.capacity_reservation_group_name
+  location                        = azurerm_resource_group.this.location
+  resource_group_id               = azurerm_resource_group.this.id
+  subscription_id                 = local.subscription_id
+  tags                            = local.tags
+}
+
+
+
+# This is the module call for capacity reservation
+module "capacity_reservation" {
+  source = "../../modules/capacity_reservation"
+
+  capacity_reservation_group_id = module.capacity_reservation_group.capacity_reservation_group_id
+  capacity_reservation_name     = local.capacity_reservation_name
+  location                      = azurerm_resource_group.this.location
+  sku                           = local.sku
+  tags                          = local.tags
+  zones                         = local.zones
 }
 ```
 
@@ -76,9 +62,11 @@ module "test" {
 
 The following requirements are needed by this module:
 
-- <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) (~> 1.5)
+- <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) (>= 1.9, < 2.0)
 
-- <a name="requirement_azurerm"></a> [azurerm](#requirement\_azurerm) (~> 4.21)
+- <a name="requirement_azapi"></a> [azapi](#requirement\_azapi) (~> 2.4)
+
+- <a name="requirement_azurerm"></a> [azurerm](#requirement\_azurerm) (~> 4.0)
 
 - <a name="requirement_modtm"></a> [modtm](#requirement\_modtm) (~> 0.3)
 
@@ -98,25 +86,39 @@ No required inputs.
 
 ## Optional Inputs
 
-The following input variables are optional (have default values):
-
-### <a name="input_enable_telemetry"></a> [enable\_telemetry](#input\_enable\_telemetry)
-
-Description: This variable controls whether or not telemetry is enabled for the module.  
-For more information see <https://aka.ms/avm/telemetryinfo>.  
-If it is set to false, then no telemetry will be collected.
-
-Type: `bool`
-
-Default: `true`
+No optional inputs.
 
 ## Outputs
 
-No outputs.
+The following outputs are exported:
+
+### <a name="output_capacity_reservation_group_id"></a> [capacity\_reservation\_group\_id](#output\_capacity\_reservation\_group\_id)
+
+Description: The ID of the capacity reservation group
+
+### <a name="output_capacity_reservation_id"></a> [capacity\_reservation\_id](#output\_capacity\_reservation\_id)
+
+Description: The Reservation ID of the capacity reservation
+
+### <a name="output_capacity_reservation_resource_id"></a> [capacity\_reservation\_resource\_id](#output\_capacity\_reservation\_resource\_id)
+
+Description: The Resource ID of the capacity reservation
 
 ## Modules
 
 The following Modules are called:
+
+### <a name="module_capacity_reservation"></a> [capacity\_reservation](#module\_capacity\_reservation)
+
+Source: ../../modules/capacity_reservation
+
+Version:
+
+### <a name="module_capacity_reservation_group"></a> [capacity\_reservation\_group](#module\_capacity\_reservation\_group)
+
+Source: ../../
+
+Version:
 
 ### <a name="module_naming"></a> [naming](#module\_naming)
 
@@ -129,12 +131,6 @@ Version: ~> 0.3
 Source: Azure/avm-utl-regions/azurerm
 
 Version: ~> 0.1
-
-### <a name="module_test"></a> [test](#module\_test)
-
-Source: ../../
-
-Version:
 
 <!-- markdownlint-disable-next-line MD041 -->
 ## Data Collection

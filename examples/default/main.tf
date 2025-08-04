@@ -1,27 +1,3 @@
-terraform {
-  required_version = "~> 1.5"
-
-  required_providers {
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 4.21"
-    }
-    modtm = {
-      source  = "azure/modtm"
-      version = "~> 0.3"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.5"
-    }
-  }
-}
-
-provider "azurerm" {
-  features {}
-}
-
-
 ## Section to provide a random Azure region for the resource group
 # This allows us to randomize the region for the resource group.
 module "regions" {
@@ -48,17 +24,27 @@ resource "azurerm_resource_group" "this" {
   name     = module.naming.resource_group.name_unique
 }
 
-# This is the module call
-# Do not specify location here due to the randomization above.
-# Leaving location as `null` will cause the module to use the resource group location
-# with a data source.
-module "test" {
+# This is the module call for capacity reservation group
+module "capacity_reservation_group" {
   source = "../../"
 
-  # source             = "Azure/avm-<res/ptn>-<name>/azurerm"
-  # ...
-  location            = azurerm_resource_group.this.location
-  name                = "TODO" # TODO update with module.naming.<RESOURCE_TYPE>.name_unique
-  resource_group_name = azurerm_resource_group.this.name
-  enable_telemetry    = var.enable_telemetry # see variables.tf
+  capacity_reservation_group_name = local.capacity_reservation_group_name
+  location                        = azurerm_resource_group.this.location
+  resource_group_id               = azurerm_resource_group.this.id
+  subscription_id                 = local.subscription_id
+  tags                            = local.tags
+}
+
+
+
+# This is the module call for capacity reservation
+module "capacity_reservation" {
+  source = "../../modules/capacity_reservation"
+
+  capacity_reservation_group_id = module.capacity_reservation_group.capacity_reservation_group_id
+  capacity_reservation_name     = local.capacity_reservation_name
+  location                      = azurerm_resource_group.this.location
+  sku                           = local.sku
+  tags                          = local.tags
+  zones                         = local.zones
 }
