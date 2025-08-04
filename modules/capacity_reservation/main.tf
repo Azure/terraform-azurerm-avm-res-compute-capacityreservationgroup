@@ -1,9 +1,8 @@
 resource "azapi_resource" "capacity_reservation" {
-  type      = "Microsoft.Compute/capacityReservationGroups/capacityReservations@2024-11-01"
+  location  = var.location
   name      = var.capacity_reservation_name
   parent_id = var.capacity_reservation_group_id
-  location  = var.location
-  tags      = var.tags
+  type      = "Microsoft.Compute/capacityReservationGroups/capacityReservations@2024-11-01"
   body = {
     properties = {
     }
@@ -11,4 +10,5 @@ resource "azapi_resource" "capacity_reservation" {
     zones = var.zones
   }
   response_export_values = ["*"]
+  tags                   = var.tags
 }

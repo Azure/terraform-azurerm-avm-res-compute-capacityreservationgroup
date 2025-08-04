@@ -26,24 +26,25 @@ resource "azurerm_resource_group" "this" {
 
 # This is the module call for capacity reservation group
 module "capacity_reservation_group" {
-  source                          = "../../"
-  capacity_reservation_group_name = local.capacity_reservation_group_name
-  resource_group_id               = azurerm_resource_group.this.id
-  location                        = azurerm_resource_group.this.location
-  tags                            = local.tags
-  subscription_id                 = local.subscription_id
+  source = "../../"
 
+  capacity_reservation_group_name = local.capacity_reservation_group_name
+  location                        = azurerm_resource_group.this.location
+  resource_group_id               = azurerm_resource_group.this.id
+  subscription_id                 = local.subscription_id
+  tags                            = local.tags
 }
 
 
 
 # This is the module call for capacity reservation
 module "capacity_reservation" {
-  source                        = "../../modules/capacity_reservation"
-  capacity_reservation_name     = local.capacity_reservation_name
+  source = "../../modules/capacity_reservation"
+
   capacity_reservation_group_id = module.capacity_reservation_group.capacity_reservation_group_id
+  capacity_reservation_name     = local.capacity_reservation_name
   location                      = azurerm_resource_group.this.location
-  tags                          = local.tags
   sku                           = local.sku
+  tags                          = local.tags
   zones                         = local.zones
 }

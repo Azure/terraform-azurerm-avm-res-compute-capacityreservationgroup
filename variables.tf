@@ -1,22 +1,26 @@
-variable "location" {
-  type        = string
-  description = "Azure region where the resource should be deployed."
-  nullable    = false
-}
-
-
 # This is required for most resource modules
 # variable "resource_group_name" {
 #   type        = string
 #   description = "The resource group where the resources will be deployed."
 # }
 
+# name of the capacity reservation group
+variable "capacity_reservation_group_name" {
+  type        = string
+  description = "The name of the capacity reservation group. This must be unique within the resource group."
+}
+
+variable "location" {
+  type        = string
+  description = "Azure region where the resource should be deployed."
+  nullable    = false
+}
+
 # This is required for most resource modules
 variable "resource_group_id" {
   type        = string
   description = "The resource group id where the resources will be deployed."
 }
-
 
 # required AVM interfaces
 # remove only if not supported by the resource
@@ -225,38 +229,11 @@ DESCRIPTION
   nullable    = false
 }
 
-# tflint-ignore: terraform_unused_declarations
-variable "tags" {
-  type        = map(string)
-  default     = null
-  description = "(Optional) Tags of the resource."
-}
-
-# name of the capacity reservation group
-variable "capacity_reservation_group_name" {
-  type        = string
-  description = "The name of the capacity reservation group. This must be unique within the resource group."
-}
-
 # schema validation enabled
 variable "schema_validation_enabled" {
   type        = bool
   default     = true
   description = "Whether to enable schema validation for the AzAPI resource type and body. Defaults to true."
-}
-
-# zones for the capacity reservation group
-variable "zones" {
-  type        = list(string)
-  description = "A list of availability zones in which the capacity reservation group should be created."
-  default     = ["1", "2", "3"]
-}
-
-# subscription ID for azurerm provider
-variable "subscription_id" {
-  type        = string
-  description = "The subscription ID to use for the azurerm provider."
-  default     = ""
 }
 
 # sharing profile variable
@@ -271,4 +248,25 @@ variable "sharing_profile" {
 An object representing the sharing profile for the capacity reservation group. This includes the following properties:
 - `subscription_ids` - A list of objects, each containing an `id` property that represents the subscription ID to share the capacity reservation group with.
 DESCRIPTION
+}
+
+# subscription ID for azurerm provider
+variable "subscription_id" {
+  type        = string
+  default     = ""
+  description = "The subscription ID to use for the azurerm provider."
+}
+
+# tflint-ignore: terraform_unused_declarations
+variable "tags" {
+  type        = map(string)
+  default     = null
+  description = "(Optional) Tags of the resource."
+}
+
+# zones for the capacity reservation group
+variable "zones" {
+  type        = list(string)
+  default     = ["1", "2", "3"]
+  description = "A list of availability zones in which the capacity reservation group should be created."
 }

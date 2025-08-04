@@ -29,14 +29,10 @@ resource "azurerm_role_assignment" "this" {
 }
 
 resource "azapi_resource" "capacity_reservation_group" {
-  type                      = "Microsoft.Compute/capacityReservationGroups@2024-11-01"
-  name                      = var.capacity_reservation_group_name
-  parent_id                 = var.resource_group_id
-  location                  = var.location
-  tags                      = var.tags
-  schema_validation_enabled = var.schema_validation_enabled
-  response_export_values    = ["*"]
-
+  location  = var.location
+  name      = var.capacity_reservation_group_name
+  parent_id = var.resource_group_id
+  type      = "Microsoft.Compute/capacityReservationGroups@2024-11-01"
   body = {
     properties = merge(
       {},
@@ -52,4 +48,7 @@ resource "azapi_resource" "capacity_reservation_group" {
     )
     zones = var.zones
   }
+  response_export_values    = ["*"]
+  schema_validation_enabled = var.schema_validation_enabled
+  tags                      = var.tags
 }

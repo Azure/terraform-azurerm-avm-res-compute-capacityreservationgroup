@@ -1,30 +1,25 @@
-variable "capacity_reservation_name" {
-  description = "The name of the capacity reservation."
+variable "capacity_reservation_group_id" {
   type        = string
+  description = "The ID of the capacity reservation group."
 }
 
-variable "capacity_reservation_group_id" {
-  description = "The ID of the capacity reservation group."
+variable "capacity_reservation_name" {
   type        = string
+  description = "The name of the capacity reservation."
 }
 
 variable "location" {
-  description = "The location where the capacity reservation will be created."
   type        = string
-}
-
-variable "tags" {
-  description = "A map of tags to assign to the capacity reservation."
-  type        = map(string)
+  description = "The location where the capacity reservation will be created."
 }
 
 variable "sku" {
-  description = "The SKU information for the capacity reservation."
   type = object({
     capacity = number
     name     = string
     tier     = optional(string, "")
   })
+  description = "The SKU information for the capacity reservation."
 
   validation {
     condition = (
@@ -34,9 +29,13 @@ variable "sku" {
   }
 }
 
+variable "tags" {
+  type        = map(string)
+  description = "A map of tags to assign to the capacity reservation."
+}
 
 variable "zones" {
-  description = "The availability zones for the capacity reservation."
   type        = list(string)
   default     = ["1", "2", "3"]
+  description = "The availability zones for the capacity reservation."
 }
