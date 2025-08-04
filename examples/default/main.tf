@@ -40,8 +40,8 @@ module "capacity_reservation_group" {
 # This is the module call for capacity reservation
 module "capacity_reservation" {
   source                        = "../../modules/capacity_reservation"
-  capacity_reservation_name     = local.capacity_reservation_group_name
-  capacity_reservation_group_id = module.capacity_reservation_group.id
+  capacity_reservation_name     = local.capacity_reservation_name
+  capacity_reservation_group_id = module.capacity_reservation_group.capacity_reservation_group_id
   location                      = azurerm_resource_group.this.location
   tags                          = local.tags
   sku                           = local.sku
