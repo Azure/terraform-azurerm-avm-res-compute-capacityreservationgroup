@@ -4,6 +4,7 @@
 #   description = "The resource group where the resources will be deployed."
 # }
 
+
 # name of the capacity reservation group
 variable "capacity_reservation_group_name" {
   type        = string

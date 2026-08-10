@@ -51,4 +51,8 @@ resource "azapi_resource" "capacity_reservation_group" {
   response_export_values    = ["*"]
   schema_validation_enabled = var.schema_validation_enabled
   tags                      = var.tags
+  create_headers            = var.enable_telemetry ? { "User-Agent" : local.avm_azapi_header } : null
+  delete_headers            = var.enable_telemetry ? { "User-Agent" : local.avm_azapi_header } : null
+  read_headers              = var.enable_telemetry ? { "User-Agent" : local.avm_azapi_header } : null
+  update_headers            = var.enable_telemetry ? { "User-Agent" : local.avm_azapi_header } : null
 }
