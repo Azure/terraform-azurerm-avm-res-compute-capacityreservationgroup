@@ -10,6 +10,7 @@ resource "random_integer" "region_index" {
   max = length(module.regions.regions) - 1
   min = 0
 }
+
 ## End of section to provide a random Azure region for the resource group
 
 # This ensures we have unique CAF compliant names for our resources.
@@ -34,8 +35,6 @@ module "capacity_reservation_group" {
   subscription_id                 = local.subscription_id
   tags                            = local.tags
 }
-
-
 
 # This is the module call for capacity reservation
 module "capacity_reservation" {
