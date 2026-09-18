@@ -11,7 +11,7 @@ module "regions" {
   source  = "Azure/avm-utl-regions/azurerm"
   version = "~> 0.1"
 
-  enable_telemetry = false
+  enable_telemetry = var.enable_telemetry
 }
 
 # This allows us to randomize the region for the resource group.
@@ -41,7 +41,7 @@ module "capacity_reservation_group" {
   capacity_reservation_group_name = local.capacity_reservation_group_name
   location                        = azurerm_resource_group.this.location
   resource_group_id               = azurerm_resource_group.this.id
-  enable_telemetry                = false
+  enable_telemetry                = var.enable_telemetry
   subscription_id                 = local.subscription_id
   tags                            = local.tags
 }
@@ -88,7 +88,17 @@ No required inputs.
 
 ## Optional Inputs
 
-No optional inputs.
+The following input variables are optional (have default values):
+
+### <a name="input_enable_telemetry"></a> [enable\_telemetry](#input\_enable\_telemetry)
+
+Description: This variable controls whether or not telemetry is enabled for the module.  
+For more information see <https://aka.ms/avm/telemetryinfo>.  
+If it is set to false, then no telemetry will be collected.
+
+Type: `bool`
+
+Default: `false`
 
 ## Outputs
 
