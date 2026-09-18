@@ -1,0 +1,7 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Azure/azure-verified-modules-tools/main/src/Avm.Authoring/Resources/Schemas/v1/avm-module-metadata.schema.json",
+  "moduleDisplayName": "Capacity Reservation",
+  "moduleDescription": "Creates a capacity reservation in a capacity reservation group with a specified location and SKU.",
+  "canonicalType": "Microsoft.Compute/capacityReservationGroups/capacityReservations",
+  "telemetryIdPrefix": "46d3xtrf.res.0250a43"
+}
