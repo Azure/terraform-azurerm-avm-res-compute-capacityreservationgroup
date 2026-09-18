@@ -27,7 +27,7 @@ module "regions" {
   source  = "Azure/avm-utl-regions/azurerm"
   version = "~> 0.1"
 
-  enable_telemetry = false
+  enable_telemetry = var.enable_telemetry
 }
 
 # This allows us to randomize the region for the resource group.
@@ -60,7 +60,7 @@ module "test" {
   # source             = "Azure/avm-<res/ptn>-<name>/azurerm"
   # ...
   location            = azurerm_resource_group.this.location
-  enable_telemetry    = false  # see variables.tf
-  name                = "TODO" # TODO update with module.naming.<RESOURCE_TYPE>.name_unique
+  enable_telemetry    = var.enable_telemetry # see variables.tf
+  name                = "TODO"               # TODO update with module.naming.<RESOURCE_TYPE>.name_unique
   resource_group_name = azurerm_resource_group.this.name
 }
