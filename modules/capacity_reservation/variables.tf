@@ -11,6 +11,7 @@ variable "capacity_reservation_name" {
 variable "location" {
   type        = string
   description = "The location where the capacity reservation will be created."
+  nullable    = false
 }
 
 variable "sku" {
@@ -31,7 +32,8 @@ variable "sku" {
 
 variable "tags" {
   type        = map(string)
-  description = "A map of tags to assign to the capacity reservation."
+  default     = null
+  description = "(Optional) Tags of the resource."
 }
 
 variable "zones" {

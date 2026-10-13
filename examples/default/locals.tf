@@ -5,7 +5,6 @@ locals {
     capacity = 1
     name     = "Standard_B2ms"
   }
-  subscription_id = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" # Replace with your actual subscription ID
   tags = {
     environment = "test"
     project     = "demo"

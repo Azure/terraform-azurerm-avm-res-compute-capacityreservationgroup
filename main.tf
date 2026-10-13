@@ -1,8 +1,6 @@
-# resource "azapi_resource" "resource_group" {
-#   type     = "Microsoft.Resources/resourceGroups@2020-06-01"
-#   name     = var.resource_group_name
-#   location = var.location
-# }
+data "azurerm_client_config" "caller" {
+  count = var.subscription_id == null || var.subscription_id == "" ? 0 : 1
+}
 
 # required AVM resources interfaces
 resource "azurerm_management_lock" "this" {
@@ -51,4 +49,11 @@ resource "azapi_resource" "capacity_reservation_group" {
   response_export_values    = ["*"]
   schema_validation_enabled = var.schema_validation_enabled
   tags                      = var.tags
+
+  lifecycle {
+    precondition {
+      condition     = var.subscription_id == null || var.subscription_id == "" ? true : lower(var.subscription_id) == lower(one(data.azurerm_client_config.caller).subscription_id)
+      error_message = "subscription_id must match the subscription configured on the caller's AzureRM provider."
+    }
+  }
 }
