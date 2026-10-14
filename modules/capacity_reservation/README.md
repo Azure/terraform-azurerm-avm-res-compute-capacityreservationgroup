@@ -11,12 +11,6 @@ The following requirements are needed by this module:
 
 - <a name="requirement_azapi"></a> [azapi](#requirement\_azapi) (~> 2.12)
 
-- <a name="requirement_azurerm"></a> [azurerm](#requirement\_azurerm) (~> 4.0)
-
-- <a name="requirement_modtm"></a> [modtm](#requirement\_modtm) (~> 0.3)
-
-- <a name="requirement_random"></a> [random](#requirement\_random) (~> 3.5)
-
 ## Resources
 
 The following resources are used by this module:
@@ -60,15 +54,17 @@ object({
   })
 ```
 
-### <a name="input_tags"></a> [tags](#input\_tags)
-
-Description: A map of tags to assign to the capacity reservation.
-
-Type: `map(string)`
-
 ## Optional Inputs
 
 The following input variables are optional (have default values):
+
+### <a name="input_tags"></a> [tags](#input\_tags)
+
+Description: (Optional) Tags of the resource.
+
+Type: `map(string)`
+
+Default: `null`
 
 ### <a name="input_zones"></a> [zones](#input\_zones)
 
@@ -97,6 +93,14 @@ Description: The Reservation ID of the capacity reservation
 ### <a name="output_capacity_reservation_resource_id"></a> [capacity\_reservation\_resource\_id](#output\_capacity\_reservation\_resource\_id)
 
 Description: The Resource ID of the capacity reservation
+
+### <a name="output_name"></a> [name](#output\_name)
+
+Description: The name of the capacity reservation.
+
+### <a name="output_resource_id"></a> [resource\_id](#output\_resource\_id)
+
+Description: The resource ID of the capacity reservation.
 
 ## Modules
 

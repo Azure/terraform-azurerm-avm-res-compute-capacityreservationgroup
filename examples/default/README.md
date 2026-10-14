@@ -9,7 +9,7 @@ This deploys the module in its simplest form.
 # This allows us to randomize the region for the resource group.
 module "regions" {
   source  = "Azure/avm-utl-regions/azurerm"
-  version = "~> 0.1"
+  version = "0.12.0"
 
   enable_telemetry = var.enable_telemetry
 }
@@ -25,7 +25,7 @@ resource "random_integer" "region_index" {
 # This ensures we have unique CAF compliant names for our resources.
 module "naming" {
   source  = "Azure/naming/azurerm"
-  version = "~> 0.3"
+  version = "0.4.4"
 }
 
 # This is required for resource modules
@@ -37,18 +37,27 @@ resource "azurerm_resource_group" "this" {
 # This is the module call for capacity reservation group
 module "capacity_reservation_group" {
   source = "../../"
+  providers = {
+    azapi   = azapi
+    azurerm = azurerm
+    modtm   = modtm
+    random  = random
+  }
 
   capacity_reservation_group_name = local.capacity_reservation_group_name
   location                        = azurerm_resource_group.this.location
   resource_group_id               = azurerm_resource_group.this.id
   enable_telemetry                = var.enable_telemetry
-  subscription_id                 = local.subscription_id
+  subscription_id                 = var.subscription_id
   tags                            = local.tags
 }
 
 # This is the module call for capacity reservation
 module "capacity_reservation" {
   source = "../../modules/capacity_reservation"
+  providers = {
+    azapi = azapi
+  }
 
   capacity_reservation_group_id = module.capacity_reservation_group.capacity_reservation_group_id
   capacity_reservation_name     = local.capacity_reservation_name
@@ -66,7 +75,7 @@ The following requirements are needed by this module:
 
 - <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) (>= 1.9, < 2.0)
 
-- <a name="requirement_azapi"></a> [azapi](#requirement\_azapi) (~> 2.4)
+- <a name="requirement_azapi"></a> [azapi](#requirement\_azapi) (~> 2.12)
 
 - <a name="requirement_azurerm"></a> [azurerm](#requirement\_azurerm) (~> 4.0)
 
@@ -99,6 +108,14 @@ If it is set to false, then no telemetry will be collected.
 Type: `bool`
 
 Default: `true`
+
+### <a name="input_subscription_id"></a> [subscription\_id](#input\_subscription\_id)
+
+Description: The subscription ID for both example providers. Null uses their normal authentication configuration.
+
+Type: `string`
+
+Default: `null`
 
 ## Outputs
 
@@ -136,13 +153,13 @@ Version:
 
 Source: Azure/naming/azurerm
 
-Version: ~> 0.3
+Version: 0.4.4
 
 ### <a name="module_regions"></a> [regions](#module\_regions)
 
 Source: Azure/avm-utl-regions/azurerm
 
-Version: ~> 0.1
+Version: 0.12.0
 
 <!-- markdownlint-disable-next-line MD041 -->
 ## Data Collection

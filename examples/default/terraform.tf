@@ -4,7 +4,7 @@ terraform {
   required_providers {
     azapi = {
       source  = "Azure/azapi"
-      version = "~> 2.4"
+      version = "~> 2.12"
     }
     # TODO: Ensure all required providers are listed here and the version property includes a constraint on the maximum major version.
     azurerm = {
@@ -22,7 +22,11 @@ terraform {
   }
 }
 
+provider "azapi" {
+  subscription_id = var.subscription_id
+}
+
 provider "azurerm" {
   features {}
-  subscription_id = local.subscription_id
+  subscription_id = var.subscription_id
 }
