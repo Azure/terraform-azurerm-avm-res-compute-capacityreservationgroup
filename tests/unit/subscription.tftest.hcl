@@ -29,18 +29,15 @@ mock_provider "azurerm" {
   }
 }
 
-mock_provider "modtm" {}
-
-mock_provider "random" {}
+mock_provider "terraform" {}
 
 run "matching_subscription_and_outputs" {
   command = apply
 
   providers = {
-    azapi   = azapi
-    azurerm = azurerm
-    modtm   = modtm
-    random  = random
+    azapi     = azapi
+    azurerm   = azurerm
+    terraform = terraform
   }
 
   variables {
@@ -65,10 +62,9 @@ run "rejects_wrong_provider_subscription" {
   command = plan
 
   providers = {
-    azapi   = azapi
-    azurerm = azurerm
-    modtm   = modtm
-    random  = random
+    azapi     = azapi
+    azurerm   = azurerm
+    terraform = terraform
   }
 
   variables {
@@ -85,10 +81,9 @@ run "omitted_subscription_does_not_read_provider_context" {
   command = apply
 
   providers = {
-    azapi   = azapi
-    azurerm = azurerm
-    modtm   = modtm
-    random  = random
+    azapi     = azapi
+    azurerm   = azurerm
+    terraform = terraform
   }
 
   variables {
@@ -107,10 +102,9 @@ run "null_subscription_does_not_read_provider_context" {
   command = apply
 
   providers = {
-    azapi   = azapi
-    azurerm = azurerm
-    modtm   = modtm
-    random  = random
+    azapi     = azapi
+    azurerm   = azurerm
+    terraform = terraform
   }
 
   variables {
@@ -134,7 +128,8 @@ run "child_outputs_and_optional_tags" {
   }
 
   providers = {
-    azapi = azapi
+    azapi     = azapi
+    terraform = terraform
   }
 
   variables {

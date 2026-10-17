@@ -33,8 +33,6 @@ module "capacity_reservation_group" {
   providers = {
     azapi   = azapi
     azurerm = azurerm
-    modtm   = modtm
-    random  = random
   }
 
   capacity_reservation_group_name = local.capacity_reservation_group_name
@@ -56,6 +54,7 @@ module "capacity_reservation" {
   capacity_reservation_name     = local.capacity_reservation_name
   location                      = azurerm_resource_group.this.location
   sku                           = local.sku
+  enable_telemetry              = var.enable_telemetry
   tags                          = local.tags
   zones                         = local.zones
 }

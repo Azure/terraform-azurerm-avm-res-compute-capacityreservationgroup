@@ -6,5 +6,8 @@ terraform {
       source  = "Azure/azapi"
       version = "~> 2.12"
     }
+    terraform = {
+      source = "terraform.io/builtin/terraform"
+    }
   }
 }

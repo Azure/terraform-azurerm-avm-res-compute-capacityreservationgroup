@@ -40,8 +40,6 @@ module "capacity_reservation_group" {
   providers = {
     azapi   = azapi
     azurerm = azurerm
-    modtm   = modtm
-    random  = random
   }
 
   capacity_reservation_group_name = local.capacity_reservation_group_name
@@ -63,6 +61,7 @@ module "capacity_reservation" {
   capacity_reservation_name     = local.capacity_reservation_name
   location                      = azurerm_resource_group.this.location
   sku                           = local.sku
+  enable_telemetry              = var.enable_telemetry
   tags                          = local.tags
   zones                         = local.zones
 }
@@ -78,8 +77,6 @@ The following requirements are needed by this module:
 - <a name="requirement_azapi"></a> [azapi](#requirement\_azapi) (~> 2.12)
 
 - <a name="requirement_azurerm"></a> [azurerm](#requirement\_azurerm) (~> 4.0)
-
-- <a name="requirement_modtm"></a> [modtm](#requirement\_modtm) (~> 0.3)
 
 - <a name="requirement_random"></a> [random](#requirement\_random) (~> 3.5)
 
