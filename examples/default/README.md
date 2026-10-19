@@ -9,8 +9,9 @@ This deploys the module in its simplest form.
 # This allows us to randomize the region for the resource group.
 module "regions" {
   source  = "Azure/avm-utl-regions/azurerm"
-  version = "0.12.0"
+  version = "0.13.0"
 
+  location         = var.location
   enable_telemetry = var.enable_telemetry
 }
 
@@ -24,8 +25,8 @@ resource "random_integer" "region_index" {
 
 # This ensures we have unique CAF compliant names for our resources.
 module "naming" {
-  source  = "Azure/naming/azurerm"
-  version = "0.4.4"
+  source  = "Azure/avm-utl-naming/azure"
+  version = "0.2.0"
 }
 
 # This is required for resource modules
@@ -40,8 +41,8 @@ module "capacity_reservation_group" {
   providers = {
     azapi   = azapi
     azurerm = azurerm
-    modtm   = modtm
-    random  = random
+
+    random = random
   }
 
   capacity_reservation_group_name = local.capacity_reservation_group_name
@@ -63,6 +64,7 @@ module "capacity_reservation" {
   capacity_reservation_name     = local.capacity_reservation_name
   location                      = azurerm_resource_group.this.location
   sku                           = local.sku
+  enable_telemetry              = var.enable_telemetry
   tags                          = local.tags
   zones                         = local.zones
 }
@@ -109,6 +111,14 @@ Type: `bool`
 
 Default: `true`
 
+### <a name="input_location"></a> [location](#input\_location)
+
+Description: The Azure region for this module's resources or telemetry deployment.
+
+Type: `string`
+
+Default: `"eastus"`
+
 ### <a name="input_subscription_id"></a> [subscription\_id](#input\_subscription\_id)
 
 Description: The subscription ID for both example providers. Null uses their normal authentication configuration.
@@ -151,15 +161,15 @@ Version:
 
 ### <a name="module_naming"></a> [naming](#module\_naming)
 
-Source: Azure/naming/azurerm
+Source: Azure/avm-utl-naming/azure
 
-Version: 0.4.4
+Version: 0.2.0
 
 ### <a name="module_regions"></a> [regions](#module\_regions)
 
 Source: Azure/avm-utl-regions/azurerm
 
-Version: 0.12.0
+Version: 0.13.0
 
 <!-- markdownlint-disable-next-line MD041 -->
 ## Data Collection

@@ -13,3 +13,10 @@ variable "subscription_id" {
   default     = null
   description = "The subscription ID for both example providers. Null uses their normal authentication configuration."
 }
+
+variable "location" {
+  type        = string
+  default     = "eastus"
+  description = "The Azure region for this module's resources or telemetry deployment."
+  nullable    = false
+}
