@@ -8,6 +8,13 @@ If it is set to false, then no telemetry will be collected.
 DESCRIPTION
 }
 
+variable "location" {
+  type        = string
+  default     = "eastus"
+  description = "The Azure region for this module's resources or telemetry deployment."
+  nullable    = false
+}
+
 variable "subscription_id" {
   type        = string
   default     = null
