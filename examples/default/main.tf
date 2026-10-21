@@ -31,10 +31,6 @@ resource "azurerm_resource_group" "this" {
 # This is the module call for capacity reservation group
 module "capacity_reservation_group" {
   source = "../../"
-  providers = {
-    azapi   = azapi
-    azurerm = azurerm
-  }
 
   capacity_reservation_group_name = local.capacity_reservation_group_name
   location                        = azurerm_resource_group.this.location
@@ -47,9 +43,6 @@ module "capacity_reservation_group" {
 # This is the module call for capacity reservation
 module "capacity_reservation" {
   source = "../../modules/capacity_reservation"
-  providers = {
-    azapi = azapi
-  }
 
   capacity_reservation_group_id = module.capacity_reservation_group.capacity_reservation_group_id
   capacity_reservation_name     = local.capacity_reservation_name

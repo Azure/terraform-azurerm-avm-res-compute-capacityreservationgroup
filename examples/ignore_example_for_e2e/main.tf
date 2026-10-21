@@ -58,10 +58,6 @@ resource "azurerm_resource_group" "this" {
 
 module "test" {
   source = "../../"
-  providers = {
-    azapi   = azapi
-    azurerm = azurerm
-  }
 
   capacity_reservation_group_name = "test-capacity-reservation-group"
   location                        = azurerm_resource_group.this.location
