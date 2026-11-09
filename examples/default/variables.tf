@@ -18,5 +18,24 @@ variable "location" {
 variable "subscription_id" {
   type        = string
   default     = null
-  description = "The subscription ID for both example providers. Null uses their normal authentication configuration."
+  description = "The subscription ID for the AzAPI provider. Null uses its normal authentication configuration."
+}
+
+variable "vm_size" {
+  type        = string
+  default     = "Standard_D2s_v5"
+  description = "Capacity-reservation-supported VM size with approved quota and capacity in the selected region/zone; verify live eligibility before deployment."
+  nullable    = false
+}
+
+variable "zone" {
+  type        = string
+  default     = "1"
+  description = "Approved logical zone used by both the group envelope and standalone single-reservation submodule."
+  nullable    = false
+
+  validation {
+    condition     = contains(["1", "2", "3"], var.zone)
+    error_message = "Choose one logical zone from 1, 2 and 3."
+  }
 }
