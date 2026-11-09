@@ -1,8 +1,3 @@
-variable "capacity_reservation_group_id" {
-  type        = string
-  description = "The ID of the capacity reservation group."
-}
-
 variable "capacity_reservation_name" {
   type        = string
   description = "The name of the capacity reservation."
@@ -12,6 +7,17 @@ variable "location" {
   type        = string
   description = "The location where the capacity reservation will be created."
   nullable    = false
+}
+
+variable "parent_id" {
+  type        = string
+  description = "The fully-qualified ARM resource ID of the existing capacity reservation group."
+  nullable    = false
+
+  validation {
+    condition     = can(provider::azapi::parse_resource_id("Microsoft.Compute/capacityReservationGroups", var.parent_id))
+    error_message = "`parent_id` must be a valid capacity reservation group resource ID."
+  }
 }
 
 variable "sku" {

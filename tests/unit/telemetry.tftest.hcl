@@ -8,7 +8,7 @@ mock_provider "azapi" {
   }
 }
 
-mock_provider "azurerm" {}
+mock_provider "random" {}
 
 mock_provider "terraform" {
   mock_resource "terraform_data" {
@@ -28,13 +28,13 @@ run "root_telemetry_enabled_by_default" {
 
   providers = {
     azapi     = azapi
-    azurerm   = azurerm
+    random    = random
     terraform = terraform
   }
 
   variables {
     capacity_reservation_group_name = "telemetry-unit"
-    resource_group_id               = "/subscriptions/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/resourceGroups/unit"
+    parent_id                       = "/subscriptions/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/resourceGroups/unit"
   }
 
   assert {
@@ -64,13 +64,13 @@ run "root_telemetry_disabled" {
 
   providers = {
     azapi     = azapi
-    azurerm   = azurerm
+    random    = random
     terraform = terraform
   }
 
   variables {
     capacity_reservation_group_name = "telemetry-unit"
-    resource_group_id               = "/subscriptions/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/resourceGroups/unit"
+    parent_id                       = "/subscriptions/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/resourceGroups/unit"
     enable_telemetry                = false
   }
 
@@ -89,12 +89,13 @@ run "child_telemetry_enabled_by_default" {
 
   providers = {
     azapi     = azapi
+    random    = random
     terraform = terraform
   }
 
   variables {
-    capacity_reservation_group_id = "/subscriptions/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/resourceGroups/unit/providers/Microsoft.Compute/capacityReservationGroups/unit"
-    capacity_reservation_name     = "telemetry-child"
+    parent_id                 = "/subscriptions/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/resourceGroups/unit/providers/Microsoft.Compute/capacityReservationGroups/unit"
+    capacity_reservation_name = "telemetry-child"
     sku = {
       capacity = 1
       name     = "Standard_B2ms"
@@ -132,13 +133,14 @@ run "child_telemetry_disabled" {
 
   providers = {
     azapi     = azapi
+    random    = random
     terraform = terraform
   }
 
   variables {
-    capacity_reservation_group_id = "/subscriptions/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/resourceGroups/unit/providers/Microsoft.Compute/capacityReservationGroups/unit"
-    capacity_reservation_name     = "telemetry-child"
-    enable_telemetry              = false
+    parent_id                 = "/subscriptions/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/resourceGroups/unit/providers/Microsoft.Compute/capacityReservationGroups/unit"
+    capacity_reservation_name = "telemetry-child"
+    enable_telemetry          = false
     sku = {
       capacity = 1
       name     = "Standard_B2ms"

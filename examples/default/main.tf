@@ -23,9 +23,19 @@ module "naming" {
 }
 
 # This is required for resource modules
-resource "azurerm_resource_group" "this" {
-  location = module.regions.regions[random_integer.region_index.result].name
-  name     = module.naming.resource_group.name_unique
+data "azapi_client_config" "this" {}
+
+resource "azapi_resource" "resource_group" {
+  location               = module.regions.regions[random_integer.region_index.result].name
+  name                   = module.naming.resource_group.name_unique
+  parent_id              = data.azapi_client_config.this.subscription_resource_id
+  type                   = "Microsoft.Resources/resourceGroups@2024-03-01"
+  response_export_values = []
+}
+
+moved {
+  from = azurerm_resource_group.this
+  to   = azapi_resource.resource_group
 }
 
 # This is the module call for capacity reservation group
@@ -33,8 +43,8 @@ module "capacity_reservation_group" {
   source = "../../"
 
   capacity_reservation_group_name = local.capacity_reservation_group_name
-  location                        = azurerm_resource_group.this.location
-  resource_group_id               = azurerm_resource_group.this.id
+  location                        = azapi_resource.resource_group.location
+  parent_id                       = azapi_resource.resource_group.id
   enable_telemetry                = var.enable_telemetry
   subscription_id                 = var.subscription_id
   tags                            = local.tags
@@ -44,11 +54,11 @@ module "capacity_reservation_group" {
 module "capacity_reservation" {
   source = "../../modules/capacity_reservation"
 
-  capacity_reservation_group_id = module.capacity_reservation_group.capacity_reservation_group_id
-  capacity_reservation_name     = local.capacity_reservation_name
-  location                      = azurerm_resource_group.this.location
-  sku                           = local.sku
-  enable_telemetry              = var.enable_telemetry
-  tags                          = local.tags
-  zones                         = local.zones
+  capacity_reservation_name = local.capacity_reservation_name
+  location                  = azapi_resource.resource_group.location
+  parent_id                 = module.capacity_reservation_group.capacity_reservation_group_id
+  sku                       = local.sku
+  enable_telemetry          = var.enable_telemetry
+  tags                      = local.tags
+  zones                     = local.zones
 }

@@ -1,14 +1,31 @@
-resource "azapi_resource" "capacity_reservation" {
+resource "azapi_resource" "this" {
   location  = var.location
   name      = var.capacity_reservation_name
-  parent_id = var.capacity_reservation_group_id
-  type      = "Microsoft.Compute/capacityReservationGroups/capacityReservations@2024-11-01"
+  parent_id = var.parent_id
+  type      = var.resource_types.compute_capacity_reservation_groups_capacity_reservations
   body = {
     properties = {
     }
     sku   = var.sku
     zones = var.zones
   }
-  response_export_values = ["*"]
+  ignore_body_changes    = length(var.ignore_body_changes.compute_capacity_reservation_groups_capacity_reservations) > 0 ? var.ignore_body_changes.compute_capacity_reservation_groups_capacity_reservations : null
+  response_export_values = ["properties.reservationId"]
+  retry                  = var.retry
   tags                   = var.tags
+
+  dynamic "timeouts" {
+    for_each = var.timeouts == null ? [] : [var.timeouts]
+    content {
+      create = timeouts.value.create
+      read   = timeouts.value.read
+      update = timeouts.value.update
+      delete = timeouts.value.delete
+    }
+  }
+}
+
+moved {
+  from = azapi_resource.capacity_reservation
+  to   = azapi_resource.this
 }
