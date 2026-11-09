@@ -4,6 +4,8 @@
 
 This deploys the module in its simplest form.
 
+The standalone reservation explicitly receives one `zone`, also passed as the group envelope. Choose an approved `vm_size`, `zone` and `location`; the example default is one `Standard_D2s_v5` slot, not the former B-series selection. Reserved capacity is billable even when unused. When upgrading an already-applied older example, explicitly preserve its actual size/zone rather than accepting changed example defaults as a nondestructive upgrade.
+
 All direct Azure scaffolding uses AzAPI. If upgrading an already-applied v0.2.0 example in the same state, the example includes a move from its old AzureRM resource group binding to the AzAPI binding. Inspect the saved refreshed plan and preserve the resource group ID; do not approve a resource group deletion/replacement. This path remains untested against Azure.
 
 ```hcl
@@ -57,6 +59,7 @@ module "capacity_reservation_group" {
   enable_telemetry                = var.enable_telemetry
   subscription_id                 = var.subscription_id
   tags                            = local.tags
+  zones                           = [local.zone]
 }
 
 # This is the module call for capacity reservation
@@ -67,9 +70,9 @@ module "capacity_reservation" {
   location                  = azapi_resource.resource_group.location
   parent_id                 = module.capacity_reservation_group.capacity_reservation_group_id
   sku                       = local.sku
+  zone                      = local.zone
   enable_telemetry          = var.enable_telemetry
   tags                      = local.tags
-  zones                     = local.zones
 }
 ```
 
@@ -126,6 +129,22 @@ Description: The subscription ID for the AzAPI provider. Null uses its normal au
 Type: `string`
 
 Default: `null`
+
+### <a name="input_vm_size"></a> [vm\_size](#input\_vm\_size)
+
+Description: Capacity-reservation-supported VM size with approved quota and capacity in the selected region/zone; verify live eligibility before deployment.
+
+Type: `string`
+
+Default: `"Standard_D2s_v5"`
+
+### <a name="input_zone"></a> [zone](#input\_zone)
+
+Description: Approved logical zone used by both the group envelope and standalone single-reservation submodule.
+
+Type: `string`
+
+Default: `"1"`
 
 ## Outputs
 

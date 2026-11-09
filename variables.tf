@@ -125,5 +125,11 @@ variable "tags" {
 variable "zones" {
   type        = list(string)
   default     = ["1", "2", "3"]
-  description = "A list of availability zones in which the capacity reservation group should be created."
+  description = "Group-wide availability-zone envelope, distinct from each capacity_reservations definition's requested zones. Use [] for a regional group; regional ARM requests omit zones."
+  nullable    = false
+
+  validation {
+    condition     = length(distinct(var.zones)) == length(var.zones) && alltrue([for zone in var.zones : contains(["1", "2", "3"], zone)])
+    error_message = "Group zones must be [] or distinct logical zones from 1, 2 and 3."
+  }
 }

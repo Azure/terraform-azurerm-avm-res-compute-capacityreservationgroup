@@ -37,6 +37,7 @@ variables {
   location                  = "westeurope"
   sku                       = { name = "Standard_D2s_v5", capacity = 1 }
   enable_telemetry          = false
+  zone                      = "1"
 }
 
 run "standalone_child_scoped_extensions" {

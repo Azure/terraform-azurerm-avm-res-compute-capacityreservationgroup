@@ -18,7 +18,7 @@ module "reservation" {
   capacity_reservation_name = "standalone"
   location                  = "westeurope"
   sku                       = { name = "Standard_D2s_v5", capacity = 1 }
-  zones                     = ["1"]
+  zone                      = "1"
   lock                      = { kind = "CanNotDelete" }
   role_assignments = {
     reader = {
@@ -44,7 +44,13 @@ Requires Terraform 1.11+. Rename input `capacity_reservation_group_id` to `paren
 
 `resource_types`, `retry`, `timeouts` and `ignore_body_changes` apply to the reservation and both owned extensions. Ignore paths are body-relative dot notation; ignored values are not sent to Azure and changes take effect after apply. New lock/assignment addresses have no AzureRM migration sources; enabling them is an intentional addition, not conversion of released child resources.
 
-SKU capacity and zones retain the released request shape and defaults. Availability/quota, SKU mutability, collection persistence, externally associated VMs and locked replacement require separately authorized Azure tests. Do not infer persistence or a safe rollback from mocks. See the root module's upgrade and lock guidance.
+`zone` is required with no default: supply one logical zone (`"1"`, `"2"` or `"3"`) or explicit `null` for regional capacity. The ARM body contains `zones = [var.zone]` only for a zonal reservation; regional requests omit `zones`, following the published regional create contract. Replace the old list-valued `zones` input with this single value and preserve the existing effective zone during upgrade. A reservation never spans three zones.
+
+The standalone caller must match the existing group's location and regional/zonal envelope and ensure each size/zone tuple is unique across every reservation owner. This submodule performs no hidden group read. The root validates those properties for its own children and expands explicit SKU-definition zone lists.
+
+`sku.capacity` must be a nonnegative integer. Zero is valid for the published resize-to-zero/disassociation workflow; it does not reserve useful capacity or prove zero-create acceptance. Capacity remains updateable; changing SKU name or zone requests replacement. Quota, live capacity and Targeted SKU eligibility remain service checks. Block reservations and their different quantity/update restrictions are not modeled.
+
+Availability/quota, zero-create/resize persistence, collection behavior, externally associated VMs and locked replacement require separately authorized Azure tests. Do not infer persistence, released-state adoption or a safe rollback from mocks. See the root module's upgrade and lock guidance.
 
 <!-- markdownlint-disable MD033 -->
 ## Requirements
@@ -103,6 +109,12 @@ object({
     tier     = optional(string, "")
   })
 ```
+
+### <a name="input_zone"></a> [zone](#input\_zone)
+
+Description: Required single logical availability zone (1, 2 or 3), or explicit null for regional capacity (zones omitted from ARM). No default. The caller must match the existing group's location and regional/zonal envelope; this submodule does not read remote group properties.
+
+Type: `string`
 
 ## Optional Inputs
 
@@ -263,22 +275,6 @@ object({
 ```
 
 Default: `null`
-
-### <a name="input_zones"></a> [zones](#input\_zones)
-
-Description: The availability zones for the capacity reservation.
-
-Type: `list(string)`
-
-Default:
-
-```json
-[
-  "1",
-  "2",
-  "3"
-]
-```
 
 ## Outputs
 

@@ -202,21 +202,21 @@ run "parent_owns_child_cardinality" {
     }
   }
   override_resource {
-    target = module.capacity_reservation["first"].azapi_resource.this
+    target = module.capacity_reservation["5:first:zone-1"].azapi_resource.this
     values = {
       id     = "/subscriptions/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/resourceGroups/unit/providers/Microsoft.Compute/capacityReservationGroups/unit/capacityReservations/first"
       output = { properties = { reservationId = "platform-first" } }
     }
   }
   override_resource {
-    target = module.capacity_reservation["second"].azapi_resource.this
+    target = module.capacity_reservation["6:second:zone-2"].azapi_resource.this
     values = {
       id     = "/subscriptions/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/resourceGroups/unit/providers/Microsoft.Compute/capacityReservationGroups/unit/capacityReservations/second"
       output = { properties = { reservationId = "platform-second" } }
     }
   }
   assert {
-    condition     = toset(keys(output.capacity_reservation_resource_ids)) == toset(["first", "second"])
+    condition     = toset(keys(output.capacity_reservation_resource_ids)) == toset(["5:first:zone-1", "6:second:zone-2"])
     error_message = "The parent must aggregate independently managed single-instance children by input key."
   }
   assert {
@@ -224,8 +224,8 @@ run "parent_owns_child_cardinality" {
       output.resource_id == output.capacity_reservation_group_id &&
       can(provider::azapi::parse_resource_id("Microsoft.Compute/capacityReservationGroups", output.resource_id)) &&
       alltrue([for id in output.capacity_reservation_resource_ids : can(provider::azapi::parse_resource_id("Microsoft.Compute/capacityReservationGroups/capacityReservations", id))]) &&
-      output.capacity_reservation_resource_ids["first"] != output.resource_id &&
-      output.capacity_reservation_resource_ids["first"] != output.capacity_reservation_resource_ids["second"] &&
+      output.capacity_reservation_resource_ids["5:first:zone-1"] != output.resource_id &&
+      output.capacity_reservation_resource_ids["5:first:zone-1"] != output.capacity_reservation_resource_ids["6:second:zone-2"] &&
       !can(azapi_resource.this.body.properties.capacityReservation) &&
       !can(azapi_resource.this.body.properties.virtualMachinesAssociated)
     )
@@ -371,8 +371,8 @@ run "rejects_duplicate_child_names" {
   command = plan
   variables {
     capacity_reservations = {
-      first  = { name = "duplicate", sku = { name = "Standard_B2ms", capacity = 1 } }
-      second = { name = "DUPLICATE", sku = { name = "Standard_B2ms", capacity = 1 } }
+      first  = { name = "duplicate", sku = { name = "Standard_D2s_v5", capacity = 1 }, zones = ["1"] }
+      second = { name = "DUPLICATE", sku = { name = "Standard_D4s_v5", capacity = 1 }, zones = ["1"] }
     }
   }
   expect_failures = [var.capacity_reservations]

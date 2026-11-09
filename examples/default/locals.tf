@@ -3,11 +3,11 @@ locals {
   capacity_reservation_name       = "test-capacity-reservation"
   sku = {
     capacity = 1
-    name     = "Standard_B2ms"
+    name     = var.vm_size
   }
   tags = {
     environment = "test"
     project     = "demo"
   }
-  zones = ["1"] # Specify the availability zones for the
+  zone = var.zone
 }

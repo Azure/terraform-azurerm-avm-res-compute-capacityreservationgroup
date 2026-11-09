@@ -28,7 +28,7 @@ run "child_body_controls_and_outputs" {
     enable_telemetry          = false
     sku                       = { name = "Standard_D2s_v5", capacity = 3, tier = "Standard" }
     tags                      = { environment = "unit" }
-    zones                     = ["1"]
+    zone                      = "1"
     retry                     = { error_message_regex = ["ScopeLocked"], interval_seconds = 5 }
     timeouts                  = { create = "45m", delete = "10m" }
     ignore_body_changes       = { compute_capacity_reservation_groups_capacity_reservations = ["sku.capacity"] }
@@ -78,6 +78,7 @@ run "rejects_child_wrong_parent_type" {
     location                  = "westeurope"
     enable_telemetry          = false
     sku                       = { name = "Standard_B2ms", capacity = 1 }
+    zone                      = null
   }
   expect_failures = [var.parent_id]
   providers = {

@@ -7,7 +7,7 @@ resource "azapi_resource" "this" {
   name      = var.capacity_reservation_group_name
   parent_id = var.parent_id
   type      = var.resource_types.compute_capacity_reservation_groups
-  body = {
+  body = merge({
     properties = merge(
       {},
       var.sharing_profile != null ? {
@@ -20,8 +20,7 @@ resource "azapi_resource" "this" {
         }
       } : {}
     )
-    zones = var.zones
-  }
+  }, length(var.zones) == 0 ? {} : { zones = var.zones })
   ignore_body_changes       = length(var.ignore_body_changes.compute_capacity_reservation_groups) > 0 ? var.ignore_body_changes.compute_capacity_reservation_groups : null
   response_export_values    = []
   retry                     = var.retry
@@ -48,12 +47,13 @@ resource "azapi_resource" "this" {
 
 module "capacity_reservation" {
   source   = "./modules/capacity_reservation"
-  for_each = var.capacity_reservations
+  for_each = local.capacity_reservations
 
   capacity_reservation_name = each.value.name
   location                  = var.location
   parent_id                 = azapi_resource.this.id
   sku                       = each.value.sku
+  zone                      = each.value.zone
   enable_telemetry          = var.enable_telemetry
   ignore_body_changes       = var.ignore_body_changes.compute_capacity_reservation_groups_capacity_reservations
   lock                      = each.value.lock
@@ -62,7 +62,6 @@ module "capacity_reservation" {
   role_assignments          = each.value.role_assignments
   tags                      = each.value.tags == null ? var.tags : each.value.tags
   timeouts                  = var.timeouts
-  zones                     = each.value.zones
 }
 
 moved {

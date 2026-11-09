@@ -48,6 +48,7 @@ module "capacity_reservation_group" {
   enable_telemetry                = var.enable_telemetry
   subscription_id                 = var.subscription_id
   tags                            = local.tags
+  zones                           = [local.zone]
 }
 
 # This is the module call for capacity reservation
@@ -58,7 +59,7 @@ module "capacity_reservation" {
   location                  = azapi_resource.resource_group.location
   parent_id                 = module.capacity_reservation_group.capacity_reservation_group_id
   sku                       = local.sku
+  zone                      = local.zone
   enable_telemetry          = var.enable_telemetry
   tags                      = local.tags
-  zones                     = local.zones
 }

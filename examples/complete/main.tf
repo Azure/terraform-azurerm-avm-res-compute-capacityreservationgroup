@@ -25,8 +25,8 @@ module "capacity_reservation_group" {
   capacity_reservations = {
     primary = {
       name  = "primary"
-      sku   = { name = "Standard_D2s_v5", capacity = 1, tier = "Standard" }
-      zones = ["1"]
+      sku   = { name = var.vm_sizes.primary, capacity = 1, tier = "Standard" }
+      zones = var.reservation_zones
       lock  = { kind = "CanNotDelete", notes = "Example individual reservation lock" }
       role_assignments = {
         reader = {
@@ -36,6 +36,18 @@ module "capacity_reservation_group" {
           skip_service_principal_aad_check = true
         }
       }
+    }
+    replacement = {
+      name  = "replacement"
+      sku   = { name = var.vm_sizes.replacement, capacity = 1 }
+      zones = [var.reservation_zones[0]]
+      tags  = { workload = "explicit-replacement" }
+    }
+    untagged = {
+      name  = "untagged"
+      sku   = { name = var.vm_sizes.untagged, capacity = 1 }
+      zones = [var.reservation_zones[0]]
+      tags  = {}
     }
   }
   enable_telemetry = var.enable_telemetry
@@ -59,5 +71,5 @@ module "capacity_reservation_group" {
   subscription_id = var.subscription_id
   tags            = { environment = "example" }
   timeouts        = { create = "30m", delete = "30m" }
-  zones           = ["1"]
+  zones           = var.reservation_zones
 }

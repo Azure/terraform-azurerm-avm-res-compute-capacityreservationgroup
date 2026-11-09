@@ -116,6 +116,7 @@ run "child_outputs_and_optional_tags" {
   variables {
     parent_id                 = "/subscriptions/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/resourceGroups/unit/providers/Microsoft.Compute/capacityReservationGroups/unit"
     capacity_reservation_name = "child"
+    zone                      = null
     sku = {
       capacity = 1
       name     = "Standard_B2ms"

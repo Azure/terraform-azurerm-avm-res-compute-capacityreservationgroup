@@ -96,6 +96,7 @@ run "child_telemetry_enabled_by_default" {
   variables {
     parent_id                 = "/subscriptions/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/resourceGroups/unit/providers/Microsoft.Compute/capacityReservationGroups/unit"
     capacity_reservation_name = "telemetry-child"
+    zone                      = null
     sku = {
       capacity = 1
       name     = "Standard_B2ms"
@@ -140,6 +141,7 @@ run "child_telemetry_disabled" {
   variables {
     parent_id                 = "/subscriptions/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/resourceGroups/unit/providers/Microsoft.Compute/capacityReservationGroups/unit"
     capacity_reservation_name = "telemetry-child"
+    zone                      = null
     enable_telemetry          = false
     sku = {
       capacity = 1

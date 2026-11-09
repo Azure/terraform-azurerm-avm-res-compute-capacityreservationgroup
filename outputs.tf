@@ -4,7 +4,7 @@ output "capacity_reservation_group_id" {
 }
 
 output "capacity_reservation_resource_ids" {
-  description = "Map of child ARM resource IDs keyed by capacity_reservations input keys; these are not VM association group IDs or platform reservationId values."
+  description = "Map of child ARM resource IDs keyed by expanded <key-length>:<definition-key>:zone-<zone> (or :regional) keys; these are not VM association group IDs or platform reservationId values."
   value       = { for key, reservation in module.capacity_reservation : key => reservation.resource_id }
 }
 

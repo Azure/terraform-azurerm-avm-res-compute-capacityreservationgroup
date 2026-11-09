@@ -27,12 +27,31 @@ variable "sku" {
     tier     = optional(string, "")
   })
   description = "The SKU information for the capacity reservation."
+  nullable    = false
 
+  validation {
+    condition     = try(var.sku.capacity >= 0 && var.sku.capacity == floor(var.sku.capacity), false)
+    error_message = "sku.capacity must be a nonnegative whole number. Zero supports resizing down; quota and capacity are checked by Azure."
+  }
+  validation {
+    condition     = try(trimspace(var.sku.name) != "", false)
+    error_message = "sku.name must be a nonempty VM size name. Check live SKU eligibility in the target region."
+  }
   validation {
     condition = (
       var.sku.tier == "" || var.sku.tier == "Standard" || var.sku.tier == "Basic"
     )
     error_message = "If specified, 'tier' must be either 'Standard' or 'Basic'."
+  }
+}
+
+variable "zone" {
+  type        = string
+  description = "Required single logical availability zone (1, 2 or 3), or explicit null for regional capacity (zones omitted from ARM). No default. The caller must match the existing group's location and regional/zonal envelope; this submodule does not read remote group properties."
+
+  validation {
+    condition     = var.zone == null ? true : contains(["1", "2", "3"], var.zone)
+    error_message = "zone must be one logical zone from 1, 2 or 3, or explicit null for a regional reservation."
   }
 }
 
@@ -51,10 +70,4 @@ variable "tags" {
   type        = map(string)
   default     = null
   description = "(Optional) Tags of the resource."
-}
-
-variable "zones" {
-  type        = list(string)
-  default     = ["1", "2", "3"]
-  description = "The availability zones for the capacity reservation."
 }

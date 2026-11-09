@@ -1,4 +1,15 @@
 locals {
+  capacity_reservation_expansions = flatten([
+    for key, definition in var.capacity_reservations : [
+      # Duplicate zones are rejected on the input; distinct avoids a secondary duplicate-map-key diagnostic.
+      for zone in(try(length(definition.zones), 0) == 0 ? [null] : distinct(definition.zones)) : merge(definition, {
+        key  = "${length(key)}:${key}:${zone == null ? "regional" : "zone-${zone}"}"
+        name = "${definition.name}-${zone == null ? "regional" : "z${zone}"}"
+        zone = zone
+      })
+    ]
+  ])
+  capacity_reservations              = { for reservation in local.capacity_reservation_expansions : reservation.key => reservation }
   role_definition_resource_substring = "/providers/microsoft.authorization/roledefinitions/"
   role_definition_lookup_enabled = anytrue([
     for assignment in var.role_assignments :

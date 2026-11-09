@@ -1,6 +1,10 @@
 # Complete example
 
-Combines an AzAPI resource group and identity with a parent-owned reservation, tags, non-default zones/SKU, resource-group RBAC/lock, individual reservation RBAC/lock, retries and timeouts.
+Combines an AzAPI resource group and identity with multiple parent-owned reservations, non-default zones/SKUs, resource-group RBAC/lock, individual reservation RBAC/lock, retries and timeouts.
+
+`primary` fans out to one reservation per `reservation_zones` entry (two by default). Each gets one unit **per zone**, inherits `{ environment = "example" }`, and has its own reservation-scoped lock and Reader assignment. `replacement` uses another SKU in the first zone and replaces inherited tags with `{ workload = "explicit-replacement" }`. `untagged` uses a third SKU in that zone and explicitly clears tags with `{}`. No maps are merged. `vm_sizes` and `reservation_zones` let the operator select approved capacity rather than relying on fixed availability.
+
+The defaults reserve **four VM slots** (D2s_v5 in two zones, D4s_v5 and D8s_v5 in one zone each); unused reserved capacity is billed. Choose one zone to reduce the demonstration to three slots. Distinct effective size/zone tuples are mandatory even when reservation names differ. Expanded output keys include `7:primary:zone-1`, `11:replacement:zone-1` and `8:untagged:zone-1`, plus the other primary zones.
 
 **Deployment creates billable reserved compute capacity.** Obtain explicit subscription, isolated scope, quota, SKU/zone, cost and cleanup approval before deploying. It requires role-assignment and lock permissions; registrations are not performed by this example. This example has not been deployed as part of local refactoring.
 
