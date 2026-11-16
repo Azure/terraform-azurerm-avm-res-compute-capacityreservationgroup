@@ -1,8 +1,20 @@
+variable "association_change_approved" {
+  type        = bool
+  default     = false
+  description = "Acknowledgement that an existing VM was deallocated and its association change separately approved. Not a deallocation operation or Azure-state assertion. Required with capacity_reservation_enabled = false."
+  nullable    = false
+}
+
 variable "capacity_reservation_enabled" {
   type        = bool
   default     = true
-  description = "Explicit VM-owner opt-in to consuming the group ARM ID. False sends id = null to disassociate; it does NOT remove or stop billing the reservation. Follow the staged disassociation contract before changing an allocated VM."
+  description = "Explicit upstream VM-module opt-in using the group ARM ID directly. False passes null to capacity_reservation_group_resource_id; it does NOT remove or stop billing the reservation. Deallocate first and explicitly set association_change_approved for an existing VM; prove actual clearing with readback."
   nullable    = false
+
+  validation {
+    condition     = var.capacity_reservation_enabled || var.association_change_approved
+    error_message = "Disassociation requires explicit association_change_approved after the approved deallocation/readback stage."
+  }
 }
 
 variable "enable_telemetry" {

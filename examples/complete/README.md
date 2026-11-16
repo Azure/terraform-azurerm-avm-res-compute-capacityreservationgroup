@@ -12,6 +12,8 @@ The defaults reserve **four VM slots** (D2s\_v5 in two zones, D4s\_v5 and D8s\_v
 
 The root lock protects the entire resource group, including the example identity. The child lock and child Reader assignment target only the reservation ARM ID. Parent-owned children (including their extensions) and root RBAC are ordered before the RG lock; the child lock follows child RBAC. Other independently managed resources need their own ordering. Selective replacement requires staged removal of all applicable locks, propagation wait and relock. Retry settings can help with propagation but do not prove teardown.
 
+For an approved mutation run, first apply only `locks_enabled = false`, independently verify lock absence and allow propagation. Inspect the next saved plan before changing SKU/zone/collection membership; these are intentional lifecycle changes, not nondestructive upgrade proof. Restore `locks_enabled = true` after the mutation converges. `tags` can be changed to check parent metadata propagation and the two explicit sibling overrides. Keep the same backend/workspace throughout. ReadOnly staging and released upgrades are separate scenarios in [`tests/migration`](../../tests/migration/\_header.md); this fresh example does not prove either.
+
 `resource_id` exposes the group ARM ID for opt-in consumption by an existing VM owner; `capacity_reservation_resource_ids` exposes a keyed map of child ARM IDs. No VM is created or modified here. See the root's association contract for the exact VM-side ARM property and the distinction from platform `reservationId`.
 
 ```hcl
@@ -44,7 +46,7 @@ module "capacity_reservation_group" {
       name  = "primary"
       sku   = { name = var.vm_sizes.primary, capacity = 1, tier = "Standard" }
       zones = var.reservation_zones
-      lock  = { kind = "CanNotDelete", notes = "Example individual reservation lock" }
+      lock  = var.locks_enabled ? { kind = "CanNotDelete", notes = "Example individual reservation lock" } : null
       role_assignments = {
         reader = {
           role_definition_id_or_name       = "/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7"
@@ -68,10 +70,10 @@ module "capacity_reservation_group" {
     }
   }
   enable_telemetry = var.enable_telemetry
-  lock = {
+  lock = var.locks_enabled ? {
     kind  = "CanNotDelete"
     notes = "Example resource-group lock"
-  }
+  } : null
   retry = {
     error_message_regex  = ["ScopeLocked", "PrincipalNotFound"]
     interval_seconds     = 15
@@ -86,7 +88,7 @@ module "capacity_reservation_group" {
     }
   }
   subscription_id = var.subscription_id
-  tags            = { environment = "example" }
+  tags            = var.tags
   timeouts        = { create = "30m", delete = "30m" }
   zones           = var.reservation_zones
 }
@@ -134,6 +136,14 @@ Type: `string`
 
 Default: `"eastus"`
 
+### <a name="input_locks_enabled"></a> [locks\_enabled](#input\_locks\_enabled)
+
+Description: Create the RG and reservation CanNotDelete locks. For selective replacement, first apply false without other changes, wait for propagation, perform the separately inspected mutation, then apply true. Does not stage ReadOnly upgrades.
+
+Type: `bool`
+
+Default: `true`
+
 ### <a name="input_reservation_zones"></a> [reservation\_zones](#input\_reservation\_zones)
 
 Description: Approved distinct zones for primary fan-out and the group envelope. Secondary definitions use the first zone. Quantity is one PER ZONE.
@@ -164,6 +174,20 @@ Description: AzAPI subscription; null uses normal provider authentication config
 Type: `string`
 
 Default: `null`
+
+### <a name="input_tags"></a> [tags](#input\_tags)
+
+Description: Parent tags inherited by primary reservations only. Explicit sibling maps replace inheritance; changing this input exercises a parent metadata write.
+
+Type: `map(string)`
+
+Default:
+
+```json
+{
+  "environment": "example"
+}
+```
 
 ### <a name="input_vm_sizes"></a> [vm\_sizes](#input\_vm\_sizes)
 

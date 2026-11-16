@@ -47,61 +47,53 @@ resource "azapi_resource_action" "ssh_key_pair" {
   response_export_values = ["publicKey"]
 }
 
-resource "azapi_resource" "virtual_machine" {
-  location  = var.location
-  name      = "vm-consumption"
-  parent_id = azapi_resource.resource_group.id
-  type      = "Microsoft.Compute/virtualMachines@2024-11-01"
-  body = {
-    zones = [var.zone]
-    properties = {
-      hardwareProfile = { vmSize = var.vm_size }
-      capacityReservation = {
-        capacityReservationGroup = {
-          id = var.capacity_reservation_enabled ? module.capacity_reservation_group.resource_id : null
-        }
-      }
-      storageProfile = {
-        imageReference = {
-          publisher = "Canonical"
-          offer     = "0001-com-ubuntu-server-jammy"
-          sku       = "22_04-lts-gen2"
-          version   = "latest"
-        }
-        osDisk = {
-          createOption = "FromImage"
-          deleteOption = "Delete"
-          managedDisk  = { storageAccountType = "Premium_LRS" }
-        }
-      }
-      osProfile = {
-        computerName  = "vm-consumption"
-        adminUsername = "azureuser"
-        linuxConfiguration = {
-          disablePasswordAuthentication = true
-          provisionVMAgent              = true
-          ssh = {
-            publicKeys = [{
-              path    = "/home/azureuser/.ssh/authorized_keys"
-              keyData = var.ssh_public_key == null ? azapi_resource_action.ssh_key_pair[0].output.publicKey : var.ssh_public_key
-            }]
-          }
-        }
-      }
-      networkProfile = {
-        networkInterfaces = [{
-          id         = azapi_resource.network_interface.id
-          properties = { primary = true, deleteOption = "Detach" }
-        }]
-      }
-      securityProfile = {
-        securityType = "TrustedLaunch"
-        uefiSettings = { secureBootEnabled = true, vTpmEnabled = true }
-      }
-      diagnosticsProfile = { bootDiagnostics = { enabled = true } }
+module "virtual_machine" {
+  source  = "Azure/avm-res-compute-virtualmachine/azurerm"
+  version = "0.22.0"
+
+  location            = var.location
+  name                = "vm-consumption"
+  resource_group_name = var.resource_group_name
+  zone                = var.zone
+  account_credentials = {
+    password_authentication_disabled = true
+    admin_credentials = {
+      username                           = "azureuser"
+      generate_admin_password_or_ssh_key = false
+      ssh_keys                           = [var.ssh_public_key == null ? azapi_resource_action.ssh_key_pair[0].output.publicKey : var.ssh_public_key]
     }
   }
-  response_export_values = []
+  capacity_reservation_group_resource_id = var.capacity_reservation_enabled ? module.capacity_reservation_group.resource_id : null
+  enable_telemetry                       = var.enable_telemetry
+  encryption_at_host_enabled             = false
+  network_interfaces = {
+    primary = {
+      name       = "vm-consumption-nic"
+      is_primary = true
+      ip_configurations = {
+        primary = {
+          name                          = "primary"
+          private_ip_subnet_resource_id = azapi_resource.subnet.id
+          create_public_ip_address      = false
+        }
+      }
+    }
+  }
+  os_disk = {
+    caching              = "ReadWrite"
+    storage_account_type = "Premium_LRS"
+  }
+  os_type             = "Linux"
+  parent_id           = azapi_resource.resource_group.id
+  secure_boot_enabled = true
+  sku_size            = var.vm_size
+  source_image_reference = {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-lts-gen2"
+    version   = "latest"
+  }
+  vtpm_enabled = true
 
   # The group ID alone depends only on the container, not the reserved capacity.
   depends_on = [module.capacity_reservation_group]

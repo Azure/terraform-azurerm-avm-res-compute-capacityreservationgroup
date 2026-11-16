@@ -84,7 +84,11 @@ This is a breaking **input/provider-context** change with module-owned state mov
 
 The root `capacity_reservations` collection was introduced **only in this unreleased refactor**, not v0.2.0. Its new fan-out keys and suffixed names are not a released-state migration. If you applied an earlier development checkpoint (such as `97ce95d`), do not blindly apply this collection change: it changes child addresses/names and can replace resources. Retain separately called child addresses for the released upgrade, or plan an explicitly approved development-state migration. The new child SKU/zone replacement controls also require real released-baseline plan verification; mocks do not establish adoption safety.
 
-See [complete](examples/complete) for multi-child fan-out/tag precedence and [VM consumption](examples/vm\_consumption) for an AzAPI-only, opt-in VM-owner example, including staged disassociation and teardown.
+See [complete](examples/complete) for multi-child fan-out/tag precedence and [VM consumption](examples/vm\_consumption) for an opt-in VM-owner example using the official Registry `Azure/avm-res-compute-virtualmachine/azurerm` at exact version **0.22.0** (Terraform 1.16+). Its staged disassociation and teardown require independent live verification; the group module never takes VM property ownership.
+
+The pinned VM consumer has a recorded **upstream association-ID casing observation**, reproduced with released VM 0.22.0 on 2026-11-16: two normal refreshed plans proposed a casing-only VM association update after a successful released-group baseline apply/readback. This is not a blocker attributed to the group refactor. The VM group upgrade and live association toggles were not reached; see that example's qualified result and recovered-cleanup record. This does not invalidate the separately scoped live telemetry/lock/child/fan-out upgrade evidence, and does not establish passing VM migration or fresh E2E.
+
+The [external staged migration fixtures](tests/migration/\_header.md) cover enabled telemetry and ReadOnly staging while keeping released upgrades separate from candidate-only child extensions, fan-out and VM-owner mutations. These opt-in harnesses have no implicit Azure deployment approval. Cross-subscription sharing is MCAPS manual-only, not a requirement of single-subscription AVM E2E. Fresh example success must not be reported as released-state migration proof.
 
 ### Extension compatibility
 

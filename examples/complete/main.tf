@@ -27,7 +27,7 @@ module "capacity_reservation_group" {
       name  = "primary"
       sku   = { name = var.vm_sizes.primary, capacity = 1, tier = "Standard" }
       zones = var.reservation_zones
-      lock  = { kind = "CanNotDelete", notes = "Example individual reservation lock" }
+      lock  = var.locks_enabled ? { kind = "CanNotDelete", notes = "Example individual reservation lock" } : null
       role_assignments = {
         reader = {
           role_definition_id_or_name       = "/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7"
@@ -51,10 +51,10 @@ module "capacity_reservation_group" {
     }
   }
   enable_telemetry = var.enable_telemetry
-  lock = {
+  lock = var.locks_enabled ? {
     kind  = "CanNotDelete"
     notes = "Example resource-group lock"
-  }
+  } : null
   retry = {
     error_message_regex  = ["ScopeLocked", "PrincipalNotFound"]
     interval_seconds     = 15
@@ -69,7 +69,7 @@ module "capacity_reservation_group" {
     }
   }
   subscription_id = var.subscription_id
-  tags            = { environment = "example" }
+  tags            = var.tags
   timeouts        = { create = "30m", delete = "30m" }
   zones           = var.reservation_zones
 }

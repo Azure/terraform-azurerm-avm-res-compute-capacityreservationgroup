@@ -86,4 +86,16 @@ Assert-True ($replacement.tags.workload -eq 'explicit-replacement' -and -not $re
 Assert-True (@($untagged.tags.PSObject.Properties).Count -eq 0) 'Complete example empty tags must clear inheritance.'
 Assert-True ($primary.body.sku.capacity -eq 1 -and $primarySecondZone.body.sku.capacity -eq 1 -and $replacement.body.sku.capacity -eq 1 -and $untagged.body.sku.capacity -eq 1) 'Complete example must reserve exactly four default VM slots.'
 
+$unlocked = Get-TestRecord 'test_state' 'complete_example_exposes_staged_unlock_and_metadata_controls'
+$unlockedParent = $unlocked.root_module.child_modules | Where-Object address -EQ 'module.capacity_reservation_group'
+$rootLock = @($unlockedParent.resources | Where-Object { $_.address -like '*.azapi_resource.lock*' })
+$rootRoles = @($unlockedParent.resources | Where-Object { $_.address -like '*.azapi_resource.role_assignments*' })
+$primaryModule = $unlockedParent.child_modules | Where-Object address -EQ 'module.capacity_reservation_group.module.capacity_reservation["7:primary:zone-1"]'
+$childLock = @($primaryModule.resources | Where-Object { $_.address -like '*.azapi_resource.lock*' })
+$childRoles = @($primaryModule.resources | Where-Object { $_.address -like '*.azapi_resource.role_assignments*' })
+$primaryResource = ($primaryModule.resources | Where-Object { $_.address.EndsWith('.azapi_resource.this') }).values
+Assert-True ($rootLock.Count -eq 0 -and $childLock.Count -eq 0) 'Staged unlock must remove both RG and reservation locks.'
+Assert-True ($rootRoles.Count -eq 1 -and $childRoles.Count -eq 1) 'Staged unlock must retain both Reader bindings.'
+Assert-True ($primaryResource.tags.environment -eq 'mutation' -and $primaryResource.tags.owner -eq 'parent') 'Metadata mutation must reach inherited reservation tags.'
+
 "PASS: $script:assertions nested mock-state/plan assertions; $($summary.test_summary.passed) Terraform runs. No HTTP request, Azure persistence or migration proof."

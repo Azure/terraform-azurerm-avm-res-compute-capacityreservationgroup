@@ -10,5 +10,5 @@ output "capacity_reservation_resource_ids" {
 
 output "virtual_machine_resource_id" {
   description = "The VM ARM ID for approved readback and deallocation."
-  value       = azapi_resource.virtual_machine.id
+  value       = module.virtual_machine.resource_id
 }

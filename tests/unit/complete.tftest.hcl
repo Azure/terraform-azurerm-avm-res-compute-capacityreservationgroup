@@ -3,6 +3,7 @@ mock_provider "azapi" {
     defaults = {
       subscription_resource_id = "/subscriptions/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
     }
+
   }
   mock_data "azapi_resource_list" {
     override_during = plan
@@ -48,5 +49,23 @@ run "complete_example_has_all_tag_variants" {
       "8:untagged:zone-1"
     ])
     error_message = "The actual complete example must create both primary zones plus sibling replacement/untagged definitions, not silently discard nested extra attributes."
+  }
+}
+
+run "complete_example_exposes_staged_unlock_and_metadata_controls" {
+  command = apply
+  module { source = "./examples/complete" }
+  variables {
+    enable_telemetry = false
+    locks_enabled    = false
+    tags             = { environment = "mutation", owner = "parent" }
+  }
+  override_resource {
+    target = module.capacity_reservation_group.azapi_resource.this
+    values = { id = "/subscriptions/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/resourceGroups/unit/providers/Microsoft.Compute/capacityReservationGroups/unit" }
+  }
+  assert {
+    condition     = length(output.capacity_reservation_resource_ids) == 4
+    error_message = "Staging unlock and a metadata change must retain all four reservation instances."
   }
 }

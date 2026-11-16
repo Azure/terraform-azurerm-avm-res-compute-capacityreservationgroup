@@ -12,6 +12,13 @@ variable "location" {
   nullable    = false
 }
 
+variable "locks_enabled" {
+  type        = bool
+  default     = true
+  description = "Create the RG and reservation CanNotDelete locks. For selective replacement, first apply false without other changes, wait for propagation, perform the separately inspected mutation, then apply true. Does not stage ReadOnly upgrades."
+  nullable    = false
+}
+
 variable "reservation_zones" {
   type        = list(string)
   default     = ["1", "2"]
@@ -34,6 +41,13 @@ variable "subscription_id" {
   type        = string
   default     = null
   description = "AzAPI subscription; null uses normal provider authentication configuration."
+}
+
+variable "tags" {
+  type        = map(string)
+  default     = { environment = "example" }
+  description = "Parent tags inherited by primary reservations only. Explicit sibling maps replace inheritance; changing this input exercises a parent metadata write."
+  nullable    = false
 }
 
 variable "vm_sizes" {

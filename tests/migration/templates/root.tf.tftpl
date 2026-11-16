@@ -1,0 +1,19 @@
+module "estate" {
+  source   = "./workload"
+  for_each = { existing = true }
+
+  parent_id             = var.parent_id
+  location              = var.location
+  group_name            = var.group_name
+  zone                  = var.zone
+  zones                 = var.zones
+  sku_name              = var.sku_name
+  fanout_sku_name        = var.fanout_sku_name
+  reader_principal_id   = var.reader_principal_id
+  reader_principal_type = var.reader_principal_type
+}
+
+output "identities" {
+  description = "Stable upgrade identities, not platform reservationId association targets."
+  value       = module.estate["existing"].identities
+}

@@ -1,0 +1,33 @@
+module "group" {
+  source  = "Azure/avm-res-compute-capacityreservationgroup/azurerm"
+  version = "0.2.0"
+
+  capacity_reservation_group_name = var.group_name
+  resource_group_id               = var.parent_id
+  location                        = var.location
+  zones                           = var.zones
+  enable_telemetry                = __TELEMETRY__
+  lock                            = __ROOT_LOCK__
+  role_assignments = {
+    reader = {
+      role_definition_id_or_name = "Reader"
+      principal_id              = var.reader_principal_id
+      principal_type            = var.reader_principal_type
+    }
+  }
+  tags = { phase = "baseline" }
+}
+
+module "reservation" {
+  source   = "Azure/avm-res-compute-capacityreservationgroup/azurerm//modules/capacity_reservation"
+  version  = "0.2.0"
+  for_each = { retained = true }
+
+  capacity_reservation_group_id = module.group.resource_id
+  capacity_reservation_name     = "retained"
+  location                      = var.location
+  zones                         = [var.zone]
+  sku                           = { name = var.sku_name, capacity = 1 }
+  enable_telemetry              = __TELEMETRY__
+  tags                          = { owner = "standalone" }
+}

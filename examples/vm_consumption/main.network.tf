@@ -49,22 +49,3 @@ resource "azapi_resource" "subnet" {
   }
   response_export_values = []
 }
-
-resource "azapi_resource" "network_interface" {
-  location  = var.location
-  name      = "vm-consumption-nic"
-  parent_id = azapi_resource.resource_group.id
-  type      = "Microsoft.Network/networkInterfaces@2024-05-01"
-  body = {
-    properties = {
-      ipConfigurations = [{
-        name = "primary"
-        properties = {
-          privateIPAllocationMethod = "Dynamic"
-          subnet                    = { id = azapi_resource.subnet.id }
-        }
-      }]
-    }
-  }
-  response_export_values = []
-}
