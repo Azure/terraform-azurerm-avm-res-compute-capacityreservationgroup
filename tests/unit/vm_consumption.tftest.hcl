@@ -32,6 +32,13 @@ run "opt_in" {
   }
   assert {
     condition = (
+      azapi_resource.resource_group.name == module.naming.resource_group.name_unique &&
+      module.virtual_machine.resource.parent_id == "${data.azapi_client_config.this.subscription_resource_id}/resourceGroups/${azapi_resource.resource_group.name}"
+    )
+    error_message = "The VM must use the uniquely named RG's actual scope."
+  }
+  assert {
+    condition = (
       module.virtual_machine.resource.body.properties.capacityReservation.capacityReservationGroup.id == output.capacity_reservation_group_id &&
       module.virtual_machine.resource.body.properties.hardwareProfile.vmSize == var.vm_size &&
       length(module.virtual_machine.resource.body.zones) == 1 &&
@@ -67,10 +74,13 @@ run "opt_out" {
     capacity_reservation_enabled = false
     association_change_approved  = true
     ssh_public_key               = "mock-public-key-provided-by-unit-test"
+    resource_group_name          = "approved-existing-vm"
   }
 
   assert {
     condition = (
+      azapi_resource.resource_group.name == "approved-existing-vm" &&
+      module.virtual_machine.resource.parent_id == "${data.azapi_client_config.this.subscription_resource_id}/resourceGroups/${azapi_resource.resource_group.name}" &&
       module.virtual_machine.resource.body.properties.capacityReservation == null &&
       length(azapi_resource.ssh_public_key) == 0 &&
       length(azapi_resource_action.ssh_key_pair) == 0 &&

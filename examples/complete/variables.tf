@@ -33,8 +33,8 @@ variable "reservation_zones" {
 
 variable "resource_group_name" {
   type        = string
-  default     = "capacity-reservation-complete-example"
-  description = "Unique name for an isolated example resource group."
+  default     = null
+  description = "Explicit name for an isolated example resource group. Null uses the naming module's resource_group.name_unique with a random suffix. Preserve an existing deployment's actual name when upgrading this example."
 }
 
 variable "subscription_id" {

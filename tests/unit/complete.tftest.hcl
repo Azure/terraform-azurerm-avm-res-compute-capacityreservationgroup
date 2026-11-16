@@ -31,7 +31,7 @@ mock_provider "azapi" {
 mock_provider "random" {}
 mock_provider "terraform" {}
 
-run "complete_example_has_all_tag_variants" {
+run "composition" {
   command = apply
   module { source = "./examples/complete" }
   variables {
@@ -50,15 +50,20 @@ run "complete_example_has_all_tag_variants" {
     ])
     error_message = "The actual complete example must create both primary zones plus sibling replacement/untagged definitions, not silently discard nested extra attributes."
   }
+  assert {
+    condition     = azapi_resource.resource_group.name == module.naming.resource_group.name_unique
+    error_message = "The default RG name must include the naming module's unique suffix."
+  }
 }
 
-run "complete_example_exposes_staged_unlock_and_metadata_controls" {
+run "unlocked" {
   command = apply
   module { source = "./examples/complete" }
   variables {
-    enable_telemetry = false
-    locks_enabled    = false
-    tags             = { environment = "mutation", owner = "parent" }
+    enable_telemetry    = false
+    locks_enabled       = false
+    resource_group_name = "approved-existing-complete"
+    tags                = { environment = "mutation", owner = "parent" }
   }
   override_resource {
     target = module.capacity_reservation_group.azapi_resource.this
@@ -67,5 +72,9 @@ run "complete_example_exposes_staged_unlock_and_metadata_controls" {
   assert {
     condition     = length(output.capacity_reservation_resource_ids) == 4
     error_message = "Staging unlock and a metadata change must retain all four reservation instances."
+  }
+  assert {
+    condition     = azapi_resource.resource_group.name == "approved-existing-complete"
+    error_message = "An explicitly approved existing RG name must not gain a random suffix."
   }
 }

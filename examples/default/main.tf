@@ -4,14 +4,24 @@ module "regions" {
   source  = "Azure/avm-utl-regions/azurerm"
   version = "0.13.0"
 
-  location         = var.location
-  enable_telemetry = var.enable_telemetry
+  location               = var.location
+  enable_telemetry       = var.enable_telemetry
+  has_availability_zones = true
+  is_recommended         = true
+  use_cached_data        = false
 }
 
 # This allows us to randomize the region for the resource group.
 resource "random_integer" "region_index" {
   max = length(module.regions.regions) - 1
   min = 0
+
+  lifecycle {
+    precondition {
+      condition     = length(module.regions.regions) > 0
+      error_message = "The subscription exposes no recommended regions with availability zones."
+    }
+  }
 }
 
 ## End of section to provide a random Azure region for the resource group
@@ -46,8 +56,10 @@ module "capacity_reservation_group" {
   location                        = azapi_resource.resource_group.location
   parent_id                       = azapi_resource.resource_group.id
   enable_telemetry                = var.enable_telemetry
+  retry                           = local.retry
   subscription_id                 = var.subscription_id
   tags                            = local.tags
+  timeouts                        = { delete = "10m" }
   zones                           = [local.zone]
 }
 
@@ -61,5 +73,7 @@ module "capacity_reservation" {
   sku                       = local.sku
   zone                      = local.zone
   enable_telemetry          = var.enable_telemetry
+  retry                     = local.retry
   tags                      = local.tags
+  timeouts                  = { delete = "10m" }
 }

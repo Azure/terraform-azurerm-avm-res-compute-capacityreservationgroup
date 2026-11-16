@@ -11,7 +11,7 @@ DESCRIPTION
 variable "location" {
   type        = string
   default     = "eastus"
-  description = "The Azure region for this module's resources or telemetry deployment."
+  description = "Telemetry location for the regions utility. Deployment location is randomly selected from live subscription regions filtered to recommended regions with availability zones; this input does not pin that selection."
   nullable    = false
 }
 

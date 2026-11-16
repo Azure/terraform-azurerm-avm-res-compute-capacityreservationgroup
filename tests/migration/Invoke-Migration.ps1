@@ -130,7 +130,7 @@ function Write-Configuration {
       Replace('module.capacity_reservation_group.resource_id', 'module.estate["existing"].identities.group_id').
       Replace('module.capacity_reservation_group]', 'module.estate]').
       Replace('azapi_resource.resource_group.id', 'var.parent_id').Replace('var.vm_size', 'var.sku_name').
-      Replace('var.resource_group_name', 'split("/", var.parent_id)[4]').Replace('var.enable_telemetry', 'false').
+      Replace('azapi_resource.resource_group.name', 'split("/", var.parent_id)[4]').Replace('var.enable_telemetry', 'false').
       Replace('var.ssh_public_key == null ? azapi_resource_action.ssh_key_pair[0].output.publicKey : var.ssh_public_key', 'var.ssh_public_key')
     [IO.File]::WriteAllText((Join-Path $consumer 'main.vm.tf'), $vmText, $utf8)
     $network = (Get-Content (Join-Path $repository 'examples/vm_consumption/main.network.tf') -Raw).

@@ -4,6 +4,8 @@
 
 Combines an AzAPI resource group and identity with multiple parent-owned reservations, non-default zones/SKUs, resource-group RBAC/lock, individual reservation RBAC/lock, retries and timeouts.
 
+The resource group defaults to the naming module's `resource_group.name_unique`, including its state-stable random suffix. Set `resource_group_name` to retain an explicit approved name; for an already-applied example, preserve its actual name to avoid replacement. Location and SKUs remain explicit, not random.
+
 `primary` fans out to one reservation per `reservation_zones` entry (two by default). Each gets one unit **per zone**, inherits `{ environment = "example" }`, and has its own reservation-scoped lock and Reader assignment. `replacement` uses another SKU in the first zone and replaces inherited tags with `{ workload = "explicit-replacement" }`. `untagged` uses a third SKU in that zone and explicitly clears tags with `{}`. No maps are merged. `vm_sizes` and `reservation_zones` let the operator select approved capacity rather than relying on fixed availability.
 
 The defaults reserve **four VM slots** (D2s\_v5 in two zones, D4s\_v5 and D8s\_v5 in one zone each); unused reserved capacity is billed. Choose one zone to reduce the demonstration to three slots. Distinct effective size/zone tuples are mandatory even when reservation names differ. Expanded output keys include `7:primary:zone-1`, `11:replacement:zone-1` and `8:untagged:zone-1`, plus the other primary zones.
@@ -12,6 +14,8 @@ The defaults reserve **four VM slots** (D2s\_v5 in two zones, D4s\_v5 and D8s\_v
 
 The root lock protects the entire resource group, including the example identity. The child lock and child Reader assignment target only the reservation ARM ID. Parent-owned children (including their extensions) and root RBAC are ordered before the RG lock; the child lock follows child RBAC. Other independently managed resources need their own ordering. Selective replacement requires staged removal of all applicable locks, propagation wait and relock. Retry settings can help with propagation but do not prove teardown.
 
+Alongside lock/identity propagation retries, group and child operations retry the specific nested-resource deletion message, with an initial 15-second interval, a 60-second maximum interval and the existing 30-minute delete timeout. This does not resolve a persistent child or failed-create orphan outside Terraform state; inspect and recover that resource rather than treating a retry as cleanup proof.
+
 For an approved mutation run, first apply only `locks_enabled = false`, independently verify lock absence and allow propagation. Inspect the next saved plan before changing SKU/zone/collection membership; these are intentional lifecycle changes, not nondestructive upgrade proof. Restore `locks_enabled = true` after the mutation converges. `tags` can be changed to check parent metadata propagation and the two explicit sibling overrides. Keep the same backend/workspace throughout. ReadOnly staging and released upgrades are separate scenarios in [`tests/migration`](../../tests/migration/\_header.md); this fresh example does not prove either.
 
 `resource_id` exposes the group ARM ID for opt-in consumption by an existing VM owner; `capacity_reservation_resource_ids` exposes a keyed map of child ARM IDs. No VM is created or modified here. See the root's association contract for the exact VM-side ARM property and the distinction from platform `reservationId`.
@@ -19,9 +23,14 @@ For an approved mutation run, first apply only `locks_enabled = false`, independ
 ```hcl
 data "azapi_client_config" "this" {}
 
+module "naming" {
+  source  = "Azure/avm-utl-naming/azure"
+  version = "0.2.0"
+}
+
 resource "azapi_resource" "resource_group" {
   location               = var.location
-  name                   = var.resource_group_name
+  name                   = coalesce(var.resource_group_name, module.naming.resource_group.name_unique)
   parent_id              = data.azapi_client_config.this.subscription_resource_id
   type                   = "Microsoft.Resources/resourceGroups@2024-03-01"
   response_export_values = []
@@ -75,7 +84,7 @@ module "capacity_reservation_group" {
     notes = "Example resource-group lock"
   } : null
   retry = {
-    error_message_regex  = ["ScopeLocked", "PrincipalNotFound"]
+    error_message_regex  = ["ScopeLocked", "PrincipalNotFound", "Cannot delete resource while nested resources exist"]
     interval_seconds     = 15
     max_interval_seconds = 60
   }
@@ -161,11 +170,11 @@ Default:
 
 ### <a name="input_resource_group_name"></a> [resource\_group\_name](#input\_resource\_group\_name)
 
-Description: Unique name for an isolated example resource group.
+Description: Explicit name for an isolated example resource group. Null uses the naming module's resource\_group.name\_unique with a random suffix. Preserve an existing deployment's actual name when upgrading this example.
 
 Type: `string`
 
-Default: `"capacity-reservation-complete-example"`
+Default: `null`
 
 ### <a name="input_subscription_id"></a> [subscription\_id](#input\_subscription\_id)
 
@@ -234,6 +243,12 @@ The following Modules are called:
 Source: ../../
 
 Version:
+
+### <a name="module_naming"></a> [naming](#module\_naming)
+
+Source: Azure/avm-utl-naming/azure
+
+Version: 0.2.0
 
 <!-- markdownlint-disable-next-line MD041 -->
 ## Data Collection

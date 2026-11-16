@@ -10,6 +10,8 @@ This revised fresh consumer is **not automatic state-migration guidance for an a
 
 **Do not apply without separate Azure scope/cost/cleanup approval.** Authenticate with Azure CLI or supported `ARM_*`/OIDC configuration and choose an isolated `resource_group_name`. The selected subscription must already have the required providers registered. No registrations are performed.
 
+When `resource_group_name` is null, the naming module supplies `resource_group.name_unique` with a state-stable random suffix; the VM receives that actual resource-group name. Set an explicit name for an approved scope or preserve an existing deployment's actual name to avoid replacement. Location and SKU remain explicit, not random. The group and composed reservation retry the specific nested-resource deletion message with a 15-second initial interval, a 60-second maximum interval and a 10-minute delete timeout. This handles propagation delays, not persistent child resources or failed-create orphans outside state.
+
 The VM and reservation share `vm_size`, `location` and `zone`; the group envelope contains that same zone. Defaults select `Standard_D2s_v5`, zone `1`, and the Canonical `0001-com-ubuntu-server-jammy:22_04-lts-gen2:latest` x64 Gen2 image with Trusted Launch. Verify image availability, `CapacityReservationSupported`, Targeted capacity support, Trusted Launch eligibility, subscription restrictions, regional/VM-family quota and available capacity in the approved region/zone. The example is not a runtime eligibility lookup and does not guarantee current capacity. Configure a compatible approved SKU rather than assuming every SKU works.
 
 One reserved VM slot is billed even when unused. The VM also incurs Premium LRS OS-disk and applicable compute charges; capacity-reservation allocation avoids double charging the matching consumed reservation, not all VM costs. Premium storage satisfies the managed resiliency policy without a policy exception. Disabling association does **not** release the reservation or stop its billing.
@@ -55,9 +57,14 @@ Sources: [Compute 2024-11-01 API](https://github.com/Azure/azure-rest-api-specs/
 ```hcl
 data "azapi_client_config" "this" {}
 
+module "naming" {
+  source  = "Azure/avm-utl-naming/azure"
+  version = "0.2.0"
+}
+
 resource "azapi_resource" "resource_group" {
   location               = var.location
-  name                   = var.resource_group_name
+  name                   = coalesce(var.resource_group_name, module.naming.resource_group.name_unique)
   parent_id              = data.azapi_client_config.this.subscription_resource_id
   type                   = "Microsoft.Resources/resourceGroups@2024-03-01"
   response_export_values = []
@@ -77,8 +84,14 @@ module "capacity_reservation_group" {
     }
   }
   enable_telemetry = var.enable_telemetry
-  tags             = { environment = "example" }
-  zones            = [var.zone]
+  retry = {
+    error_message_regex  = ["Cannot delete resource while nested resources exist"]
+    interval_seconds     = 15
+    max_interval_seconds = 60
+  }
+  tags     = { environment = "example" }
+  timeouts = { delete = "10m" }
+  zones    = [var.zone]
 }
 
 resource "azapi_resource" "ssh_public_key" {
@@ -108,7 +121,7 @@ module "virtual_machine" {
 
   location            = var.location
   name                = "vm-consumption"
-  resource_group_name = var.resource_group_name
+  resource_group_name = azapi_resource.resource_group.name
   zone                = var.zone
   account_credentials = {
     password_authentication_disabled = true
@@ -227,11 +240,11 @@ Default: `1`
 
 ### <a name="input_resource_group_name"></a> [resource\_group\_name](#input\_resource\_group\_name)
 
-Description: Unique name for an isolated example resource group.
+Description: Explicit name for an isolated example resource group. Null uses the naming module's resource\_group.name\_unique with a random suffix. Preserve an existing deployment's actual name when upgrading this example.
 
 Type: `string`
 
-Default: `"capacity-reservation-vm-example"`
+Default: `null`
 
 ### <a name="input_ssh_public_key"></a> [ssh\_public\_key](#input\_ssh\_public\_key)
 
@@ -290,6 +303,12 @@ The following Modules are called:
 Source: ../../
 
 Version:
+
+### <a name="module_naming"></a> [naming](#module\_naming)
+
+Source: Azure/avm-utl-naming/azure
+
+Version: 0.2.0
 
 ### <a name="module_virtual_machine"></a> [virtual\_machine](#module\_virtual\_machine)
 

@@ -4,7 +4,11 @@
 
 This deploys the module in its simplest form.
 
-The standalone reservation explicitly receives one `zone`, also passed as the group envelope. Choose an approved `vm_size`, `zone` and `location`; the example default is one `Standard_D2s_v5` slot, not the former B-series selection. Reserved capacity is billable even when unused. When upgrading an already-applied older example, explicitly preserve its actual size/zone rather than accepting changed example defaults as a nondestructive upgrade.
+The resource group uses the naming module's `resource_group.name_unique`, including its state-stable random suffix. The regions utility reads live subscription location data and filters to recommended regions with availability zones; a random index selects the deployment region. `location` is the utility's telemetry location, not a deployment-region override. Live data changes can change that index's effective region; inspect existing-state plans for replacement before applying.
+
+The standalone reservation explicitly receives one `zone`, also passed as the group envelope. Choose an approved `vm_size` and `zone`; the example default is one fixed `Standard_D2s_v5` slot, not a randomly selected SKU. The region filters do not check compute SKU restrictions, quota, selected-zone support or available capacity. Use the complete example with an explicit approved location when a fixed target is required. Reserved capacity is billable even when unused. When upgrading an already-applied older example, explicitly preserve its actual size/zone rather than accepting changed example defaults as a nondestructive upgrade.
+
+Group and standalone-reservation operations retry only the nested-resource deletion message, with an initial 15-second interval, a 60-second maximum interval and a 10-minute delete timeout. This accommodates propagation delays, not persistent child resources or failed-create orphans outside Terraform state. Those require inspection and scoped recovery; retries do not prove cleanup.
 
 All direct Azure scaffolding uses AzAPI. If upgrading an already-applied v0.2.0 example in the same state, the example includes a move from its old AzureRM resource group binding to the AzAPI binding. Inspect the saved refreshed plan and preserve the resource group ID; do not approve a resource group deletion/replacement. This path remains untested against Azure.
 
@@ -15,14 +19,24 @@ module "regions" {
   source  = "Azure/avm-utl-regions/azurerm"
   version = "0.13.0"
 
-  location         = var.location
-  enable_telemetry = var.enable_telemetry
+  location               = var.location
+  enable_telemetry       = var.enable_telemetry
+  has_availability_zones = true
+  is_recommended         = true
+  use_cached_data        = false
 }
 
 # This allows us to randomize the region for the resource group.
 resource "random_integer" "region_index" {
   max = length(module.regions.regions) - 1
   min = 0
+
+  lifecycle {
+    precondition {
+      condition     = length(module.regions.regions) > 0
+      error_message = "The subscription exposes no recommended regions with availability zones."
+    }
+  }
 }
 
 ## End of section to provide a random Azure region for the resource group
@@ -57,8 +71,10 @@ module "capacity_reservation_group" {
   location                        = azapi_resource.resource_group.location
   parent_id                       = azapi_resource.resource_group.id
   enable_telemetry                = var.enable_telemetry
+  retry                           = local.retry
   subscription_id                 = var.subscription_id
   tags                            = local.tags
+  timeouts                        = { delete = "10m" }
   zones                           = [local.zone]
 }
 
@@ -72,7 +88,9 @@ module "capacity_reservation" {
   sku                       = local.sku
   zone                      = local.zone
   enable_telemetry          = var.enable_telemetry
+  retry                     = local.retry
   tags                      = local.tags
+  timeouts                  = { delete = "10m" }
 }
 ```
 
@@ -116,7 +134,7 @@ Default: `true`
 
 ### <a name="input_location"></a> [location](#input\_location)
 
-Description: The Azure region for this module's resources or telemetry deployment.
+Description: Telemetry location for the regions utility. Deployment location is randomly selected from live subscription regions filtered to recommended regions with availability zones; this input does not pin that selection.
 
 Type: `string`
 

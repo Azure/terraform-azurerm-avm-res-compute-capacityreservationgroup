@@ -1,8 +1,13 @@
 data "azapi_client_config" "this" {}
 
+module "naming" {
+  source  = "Azure/avm-utl-naming/azure"
+  version = "0.2.0"
+}
+
 resource "azapi_resource" "resource_group" {
   location               = var.location
-  name                   = var.resource_group_name
+  name                   = coalesce(var.resource_group_name, module.naming.resource_group.name_unique)
   parent_id              = data.azapi_client_config.this.subscription_resource_id
   type                   = "Microsoft.Resources/resourceGroups@2024-03-01"
   response_export_values = []
@@ -22,8 +27,14 @@ module "capacity_reservation_group" {
     }
   }
   enable_telemetry = var.enable_telemetry
-  tags             = { environment = "example" }
-  zones            = [var.zone]
+  retry = {
+    error_message_regex  = ["Cannot delete resource while nested resources exist"]
+    interval_seconds     = 15
+    max_interval_seconds = 60
+  }
+  tags     = { environment = "example" }
+  timeouts = { delete = "10m" }
+  zones    = [var.zone]
 }
 
 resource "azapi_resource" "ssh_public_key" {
@@ -53,7 +64,7 @@ module "virtual_machine" {
 
   location            = var.location
   name                = "vm-consumption"
-  resource_group_name = var.resource_group_name
+  resource_group_name = azapi_resource.resource_group.name
   zone                = var.zone
   account_credentials = {
     password_authentication_disabled = true

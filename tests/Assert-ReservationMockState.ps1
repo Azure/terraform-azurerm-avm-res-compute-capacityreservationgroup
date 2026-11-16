@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 $repository = Split-Path $PSScriptRoot -Parent
 $separator = [IO.Path]::DirectorySeparatorChar
 $testDirectory = "tests${separator}unit"
-$filters = @('fanout', 'interfaces', 'child_validation', 'complete') | ForEach-Object {
+$filters = @('fanout', 'interfaces', 'child_validation', 'default', 'complete', 'vm_consumption') | ForEach-Object {
   "-filter=${testDirectory}${separator}${_}.tftest.hcl"
 }
 $lines = & $TerraformPath "-chdir=$repository" test -json -verbose "-test-directory=$testDirectory" @filters
@@ -32,6 +32,10 @@ function Get-ChildResource($State, [string] $Key, [string] $Label = 'this') {
   $resource = $module.resources | Where-Object { $_.address -eq "$address.azapi_resource.$Label" }
   if (-not $resource) { throw "Missing child resource: $address.azapi_resource.$Label" }
   return $resource.values
+}
+function Get-StateResources($Module) {
+  $Module.resources
+  foreach ($child in $Module.child_modules) { Get-StateResources $child }
 }
 
 $zonal = Get-TestRecord 'test_state' 'zonal_fanout'
@@ -67,7 +71,7 @@ Assert-True ($reservation.type -eq 'Microsoft.Compute/capacityReservationGroups/
 Assert-True ($reservation.retry.interval_seconds -eq 5 -and $lock.retry.interval_seconds -eq 5 -and $role.retry.interval_seconds -eq 5) 'Retries must reach every expanded child-owned resource.'
 Assert-True ($reservation.timeouts.create -eq '30m' -and $lock.timeouts.delete -eq '10m' -and $role.timeouts.delete -eq '10m') 'Timeouts must reach the reservation and its extensions.'
 
-$complete = Get-TestRecord 'test_state' 'complete_example_has_all_tag_variants'
+$complete = Get-TestRecord 'test_state' 'composition'
 $parent = $complete.root_module.child_modules | Where-Object address -EQ 'module.capacity_reservation_group'
 $nested = @{ root_module = @{ child_modules = @($parent.child_modules | ForEach-Object {
   @{
@@ -86,7 +90,7 @@ Assert-True ($replacement.tags.workload -eq 'explicit-replacement' -and -not $re
 Assert-True (@($untagged.tags.PSObject.Properties).Count -eq 0) 'Complete example empty tags must clear inheritance.'
 Assert-True ($primary.body.sku.capacity -eq 1 -and $primarySecondZone.body.sku.capacity -eq 1 -and $replacement.body.sku.capacity -eq 1 -and $untagged.body.sku.capacity -eq 1) 'Complete example must reserve exactly four default VM slots.'
 
-$unlocked = Get-TestRecord 'test_state' 'complete_example_exposes_staged_unlock_and_metadata_controls'
+$unlocked = Get-TestRecord 'test_state' 'unlocked'
 $unlockedParent = $unlocked.root_module.child_modules | Where-Object address -EQ 'module.capacity_reservation_group'
 $rootLock = @($unlockedParent.resources | Where-Object { $_.address -like '*.azapi_resource.lock*' })
 $rootRoles = @($unlockedParent.resources | Where-Object { $_.address -like '*.azapi_resource.role_assignments*' })
@@ -97,5 +101,22 @@ $primaryResource = ($primaryModule.resources | Where-Object { $_.address.EndsWit
 Assert-True ($rootLock.Count -eq 0 -and $childLock.Count -eq 0) 'Staged unlock must remove both RG and reservation locks.'
 Assert-True ($rootRoles.Count -eq 1 -and $childRoles.Count -eq 1) 'Staged unlock must retain both Reader bindings.'
 Assert-True ($primaryResource.tags.environment -eq 'mutation' -and $primaryResource.tags.owner -eq 'parent') 'Metadata mutation must reach inherited reservation tags.'
+
+foreach ($example in @(
+  @{ run = 'live_regions'; count = 2; timeout = '10m' },
+  @{ run = 'composition'; count = 5; timeout = '30m' },
+  @{ run = 'opt_in'; count = 2; timeout = '10m' }
+)) {
+  $state = Get-TestRecord 'test_state' $example.run
+  $compute = @(Get-StateResources $state.root_module | Where-Object {
+    $_.type -eq 'azapi_resource' -and $_.values.type -match '^Microsoft.Compute/capacityReservationGroups(/capacityReservations)?@'
+  })
+  Assert-True ($compute.Count -eq $example.count) "$($example.run): expected all group and reservation resources."
+  foreach ($resource in $compute) {
+    $values = $resource.values
+    Assert-True ($values.retry.error_message_regex -contains 'Cannot delete resource while nested resources exist') "$($resource.address): nested-resource delete retry missing."
+    Assert-True ($values.retry.interval_seconds -eq 15 -and $values.retry.max_interval_seconds -eq 60 -and $values.timeouts.delete -eq $example.timeout) "$($resource.address): delete retries must retain bounded backoff and timeout."
+  }
+}
 
 "PASS: $script:assertions nested mock-state/plan assertions; $($summary.test_summary.passed) Terraform runs. No HTTP request, Azure persistence or migration proof."

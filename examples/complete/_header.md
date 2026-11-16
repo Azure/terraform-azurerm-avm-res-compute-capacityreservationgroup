@@ -2,6 +2,8 @@
 
 Combines an AzAPI resource group and identity with multiple parent-owned reservations, non-default zones/SKUs, resource-group RBAC/lock, individual reservation RBAC/lock, retries and timeouts.
 
+The resource group defaults to the naming module's `resource_group.name_unique`, including its state-stable random suffix. Set `resource_group_name` to retain an explicit approved name; for an already-applied example, preserve its actual name to avoid replacement. Location and SKUs remain explicit, not random.
+
 `primary` fans out to one reservation per `reservation_zones` entry (two by default). Each gets one unit **per zone**, inherits `{ environment = "example" }`, and has its own reservation-scoped lock and Reader assignment. `replacement` uses another SKU in the first zone and replaces inherited tags with `{ workload = "explicit-replacement" }`. `untagged` uses a third SKU in that zone and explicitly clears tags with `{}`. No maps are merged. `vm_sizes` and `reservation_zones` let the operator select approved capacity rather than relying on fixed availability.
 
 The defaults reserve **four VM slots** (D2s_v5 in two zones, D4s_v5 and D8s_v5 in one zone each); unused reserved capacity is billed. Choose one zone to reduce the demonstration to three slots. Distinct effective size/zone tuples are mandatory even when reservation names differ. Expanded output keys include `7:primary:zone-1`, `11:replacement:zone-1` and `8:untagged:zone-1`, plus the other primary zones.
@@ -9,6 +11,8 @@ The defaults reserve **four VM slots** (D2s_v5 in two zones, D4s_v5 and D8s_v5 i
 **Deployment creates billable reserved compute capacity.** Obtain explicit subscription, isolated scope, quota, SKU/zone, cost and cleanup approval before deploying. It requires role-assignment and lock permissions; registrations are not performed by this example. This example has not been deployed as part of local refactoring.
 
 The root lock protects the entire resource group, including the example identity. The child lock and child Reader assignment target only the reservation ARM ID. Parent-owned children (including their extensions) and root RBAC are ordered before the RG lock; the child lock follows child RBAC. Other independently managed resources need their own ordering. Selective replacement requires staged removal of all applicable locks, propagation wait and relock. Retry settings can help with propagation but do not prove teardown.
+
+Alongside lock/identity propagation retries, group and child operations retry the specific nested-resource deletion message, with an initial 15-second interval, a 60-second maximum interval and the existing 30-minute delete timeout. This does not resolve a persistent child or failed-create orphan outside Terraform state; inspect and recover that resource rather than treating a retry as cleanup proof.
 
 For an approved mutation run, first apply only `locks_enabled = false`, independently verify lock absence and allow propagation. Inspect the next saved plan before changing SKU/zone/collection membership; these are intentional lifecycle changes, not nondestructive upgrade proof. Restore `locks_enabled = true` after the mutation converges. `tags` can be changed to check parent metadata propagation and the two explicit sibling overrides. Keep the same backend/workspace throughout. ReadOnly staging and released upgrades are separate scenarios in [`tests/migration`](../../tests/migration/_header.md); this fresh example does not prove either.
 
