@@ -122,6 +122,34 @@ run "combined_rg_extensions_and_sharing" {
   }
 }
 
+run "reject_explicit_principal_edit" {
+  command = plan
+  variables {
+    role_assignments = {
+      reader = {
+        name                       = "11111111-1111-4111-8111-111111111111"
+        role_definition_id_or_name = "Reader"
+        principal_id               = "33333333-3333-4333-8333-333333333333"
+      }
+    }
+  }
+  expect_failures = [azapi_resource.role_assignments["reader"]]
+  providers = {
+    azapi     = azapi
+    random    = random
+    terraform = terraform
+  }
+}
+
+run "clear" {
+  command = apply
+  providers = {
+    azapi     = azapi
+    random    = random
+    terraform = terraform
+  }
+}
+
 run "read_only_custom_lock_and_explicit_principal_type" {
   command = apply
   variables {
@@ -147,6 +175,86 @@ run "read_only_custom_lock_and_explicit_principal_type" {
     )
     error_message = "Role IDs must bypass lookup, tenant-level definitions must normalize, and explicit principal type must take precedence."
   }
+  providers = {
+    azapi     = azapi
+    random    = random
+    terraform = terraform
+  }
+}
+
+run "unchanged_grant_retains_guard" {
+  command = plan
+  variables {
+    role_assignments = {
+      reader = {
+        role_definition_id_or_name = "/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7"
+        principal_id               = "22222222-2222-4222-8222-222222222222"
+        principal_type             = "Group"
+      }
+    }
+  }
+  assert {
+    condition     = terraform_data.role_assignment_identity["reader"].input == local.role_assignment_identities["reader"]
+    error_message = "Effective unchanged inputs must retain the saved guard, including the skip-check/type equivalence."
+  }
+  providers = {
+    azapi     = azapi
+    random    = random
+    terraform = terraform
+  }
+}
+
+run "reject_generated_principal_edit" {
+  command = plan
+  variables {
+    role_assignments = {
+      reader = {
+        role_definition_id_or_name = "/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7"
+        principal_id               = "33333333-3333-4333-8333-333333333333"
+        principal_type             = "Group"
+      }
+    }
+  }
+  expect_failures = [azapi_resource.role_assignments["reader"]]
+  providers = {
+    azapi     = azapi
+    random    = random
+    terraform = terraform
+  }
+}
+
+run "reject_role_edit" {
+  command = plan
+  variables {
+    role_assignments = {
+      reader = {
+        role_definition_id_or_name = "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
+        principal_id               = "22222222-2222-4222-8222-222222222222"
+        principal_type             = "Group"
+      }
+    }
+  }
+  expect_failures = [azapi_resource.role_assignments["reader"]]
+  providers = {
+    azapi     = azapi
+    random    = random
+    terraform = terraform
+  }
+}
+
+run "reject_name_edit" {
+  command = plan
+  variables {
+    role_assignments = {
+      reader = {
+        name                       = "44444444-4444-4444-8444-444444444444"
+        role_definition_id_or_name = "/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7"
+        principal_id               = "22222222-2222-4222-8222-222222222222"
+        principal_type             = "Group"
+      }
+    }
+  }
+  expect_failures = [azapi_resource.role_assignments["reader"]]
   providers = {
     azapi     = azapi
     random    = random
@@ -290,7 +398,7 @@ run "rejects_duplicate_assignment_names" {
       }
     }
   }
-  expect_failures = [azapi_resource.role_assignments]
+  expect_failures = [var.capacity_reservations, azapi_resource.role_assignments]
   providers = {
     azapi     = azapi
     random    = random
@@ -376,6 +484,28 @@ run "rejects_duplicate_child_names" {
     }
   }
   expect_failures = [var.capacity_reservations]
+  providers = {
+    azapi     = azapi
+    random    = random
+    terraform = terraform
+  }
+}
+
+run "recreate_root_grant" {
+  command = apply
+  variables {
+    role_assignments = {
+      reader = {
+        role_definition_id_or_name = "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
+        principal_id               = "33333333-3333-4333-8333-333333333333"
+        principal_type             = "Group"
+      }
+    }
+  }
+  assert {
+    condition     = azapi_resource.role_assignments["reader"].name == module.avm_interfaces.role_assignments_azapi["reader"].name && terraform_data.role_assignment_identity["reader"].input.principal_id == "33333333-3333-4333-8333-333333333333"
+    error_message = "Recreation after the separate empty-map apply must accept the new inputs and utility UUID."
+  }
   providers = {
     azapi     = azapi
     random    = random

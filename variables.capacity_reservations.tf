@@ -34,7 +34,7 @@ Logical SKU definitions expanded into single-instance reservation submodules. De
 - `zones` - Required explicit list of distinct logical zones (1, 2 or 3), each within the group envelope. An empty list creates ONE regional reservation and requires a regional group (`zones = []`).
 - `tags` - Complete per-child tag override; null inherits module tags.
 - `lock` - Optional reservation-scoped lock with required `kind` (CanNotDelete or ReadOnly), optional `name` (defaults to lock-<kind>) and optional `notes`.
-- `role_assignments` - Reservation-scoped assignments keyed by stable consumer keys. Each accepts optional `name` (otherwise random UUID), required `role_definition_id_or_name` and `principal_id`, optional `description`, `skip_service_principal_aad_check` (false), `condition`, `condition_version`, `delegated_managed_identity_resource_id` and `principal_type`. See the submodule's canonical interface descriptions.
+- `role_assignments` - Reservation-scoped assignments keyed by stable consumer keys. Each accepts optional `name` (otherwise random UUID), required `role_definition_id_or_name` and `principal_id`, optional `description`, `skip_service_principal_aad_check` (false), `condition`, `condition_version`, `delegated_managed_identity_resource_id` and `principal_type`. Explicit names must be unique across the root and all expanded reservations. Split a multi-zone definition into single-zone definitions with distinct GUIDs, or omit `name`. Assignment edits require the documented staged removal/recreation. See the submodule's canonical interface descriptions.
 
 Child extensions default to null/empty and do not inherit root interface values. The root RG lock/RBAC still apply through Azure scope inheritance.
 
@@ -103,6 +103,28 @@ DESCRIPTION
       reservation.lock == null ? true : contains(["CanNotDelete", "ReadOnly"], reservation.lock.kind)
     ])
     error_message = "Each capacity_reservations[*].lock.kind must be CanNotDelete or ReadOnly."
+  }
+  validation {
+    condition = length(distinct(concat(
+      [for assignment in var.role_assignments : lower(assignment.name) if assignment.name != null],
+      flatten([
+        for reservation in var.capacity_reservations : [
+          for zone in(try(length(reservation.zones), 0) == 0 ? [null] : distinct(reservation.zones)) : [
+            for assignment in reservation.role_assignments : lower(assignment.name) if assignment.name != null
+          ]
+        ]
+      ])
+      ))) == length(concat(
+      [for assignment in var.role_assignments : assignment.name if assignment.name != null],
+      flatten([
+        for reservation in var.capacity_reservations : [
+          for zone in(try(length(reservation.zones), 0) == 0 ? [null] : distinct(reservation.zones)) : [
+            for assignment in reservation.role_assignments : assignment.name if assignment.name != null
+          ]
+        ]
+      ])
+    ))
+    error_message = "Explicit role assignment names must be unique across root assignments and all expanded reservations (case-insensitive). Omit name for multi-zone fan-out, or split into single-zone definitions with distinct GUIDs."
   }
   validation {
     condition = alltrue(flatten([

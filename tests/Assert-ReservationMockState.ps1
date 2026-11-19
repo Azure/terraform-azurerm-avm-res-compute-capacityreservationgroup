@@ -7,7 +7,7 @@ $ErrorActionPreference = 'Stop'
 $repository = Split-Path $PSScriptRoot -Parent
 $separator = [IO.Path]::DirectorySeparatorChar
 $testDirectory = "tests${separator}unit"
-$filters = @('fanout', 'interfaces', 'child_validation', 'default', 'complete', 'vm_consumption') | ForEach-Object {
+$filters = @('fanout', 'interfaces', 'child_interfaces', 'rbac_fanout', 'child_validation', 'default', 'complete', 'vm_consumption') | ForEach-Object {
   "-filter=${testDirectory}${separator}${_}.tftest.hcl"
 }
 $lines = & $TerraformPath "-chdir=$repository" test -json -verbose "-test-directory=$testDirectory" @filters
@@ -37,6 +37,34 @@ function Get-StateResources($Module) {
   $Module.resources
   foreach ($child in $Module.child_modules) { Get-StateResources $child }
 }
+
+$rootBefore = Get-TestRecord 'test_state' 'read_only_custom_lock_and_explicit_principal_type'
+$rootAfter = Get-TestRecord 'test_state' 'recreate_root_grant'
+$childBefore = Get-TestRecord 'test_state' 'standalone_child_scoped_extensions'
+$childAfter = Get-TestRecord 'test_state' 'recreate'
+foreach ($pair in @(
+  @{ before = $rootBefore; after = $rootAfter; principal = '33333333-3333-4333-8333-333333333333' },
+  @{ before = $childBefore; after = $childAfter; principal = '44444444-4444-4444-8444-444444444444' }
+)) {
+  $oldRole = $pair.before.root_module.resources | Where-Object address -EQ 'azapi_resource.role_assignments["reader"]'
+  $newRole = $pair.after.root_module.resources | Where-Object address -EQ 'azapi_resource.role_assignments["reader"]'
+  $guard = $pair.after.root_module.resources | Where-Object address -EQ 'terraform_data.role_assignment_identity["reader"]'
+  Assert-True ($oldRole.values.name -ne $newRole.values.name) 'Staged recreation must generate a fresh UUID, not reuse the previous grant name.'
+  Assert-True ($newRole.values.body.properties.principalId -eq $pair.principal -and $guard.values.input.principal_id -eq $pair.principal) 'Recreated assignment and guard must accept the new principal together.'
+}
+foreach ($run in @('unchanged_grant_retains_guard', 'unchanged')) {
+  $plan = Get-TestRecord 'test_plan' $run
+  $protected = @($plan.resource_changes | Where-Object { $_.address -in @('azapi_resource.role_assignments["reader"]', 'terraform_data.role_assignment_identity["reader"]') })
+  Assert-True ($protected.Count -eq 2 -and @($protected | Where-Object { ($_.change.actions -join ',') -ne 'no-op' }).Count -eq 0) 'Unchanged assignment inputs must preserve both grant and guard without replacement.'
+}
+$generated = Get-TestRecord 'test_state' 'generated_multizone_guids'
+$zoneOne = Get-ChildResource $generated '5:multi:zone-1' 'role_assignments["reader"]'
+$zoneTwo = Get-ChildResource $generated '5:multi:zone-2' 'role_assignments["reader"]'
+Assert-True ($zoneOne.name -ne $zoneTwo.name) 'Mock UUID values must be distinct across expanded reservations.'
+$explicit = Get-TestRecord 'test_state' 'distinct_single_zone_guids'
+$one = Get-ChildResource $explicit '3:one:zone-1' 'role_assignments["reader"]'
+$two = Get-ChildResource $explicit '3:two:zone-2' 'role_assignments["reader"]'
+Assert-True ($one.name -eq '11111111-1111-4111-8111-111111111111' -and $two.name -eq '33333333-3333-4333-8333-333333333333') 'Per-zone explicit GUIDs must reach their separate child grants unchanged.'
 
 $zonal = Get-TestRecord 'test_state' 'zonal_fanout'
 $first = Get-ChildResource $zonal '9:appliance:zone-1'

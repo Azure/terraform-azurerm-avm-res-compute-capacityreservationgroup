@@ -23,11 +23,7 @@ mock_provider "azapi" {
   }
 }
 
-mock_provider "random" {
-  mock_resource "random_uuid" {
-    defaults = { result = "11111111-1111-4111-8111-111111111111" }
-  }
-}
+mock_provider "random" {}
 
 mock_provider "terraform" {}
 
@@ -84,7 +80,7 @@ run "standalone_child_scoped_extensions" {
   assert {
     condition = (
       data.azapi_resource_list.role_definitions[0].parent_id == var.parent_id &&
-      azapi_resource.role_assignments["reader"].name == "11111111-1111-4111-8111-111111111111" &&
+      length(azapi_resource.role_assignments["reader"].name) > 0 &&
       endswith(azapi_resource.role_assignments["reader"].body.properties.roleDefinitionId, "/acdd72a7-3385-48ef-bd42-f606fba81ae7") &&
       azapi_resource.role_assignments["reader"].body.properties.principalId == var.role_assignments.reader.principal_id &&
       azapi_resource.role_assignments["reader"].body.properties.principalType == "ServicePrincipal" &&
@@ -109,6 +105,39 @@ run "standalone_child_scoped_extensions" {
       length(azapi_resource.role_assignments["reader"].response_export_values) == 0
     )
     error_message = "Every child-owned resource must honor API overrides, retries, timeouts and narrow exports. Write-only ignore values are exercised but not readable from state."
+  }
+  providers = {
+    azapi     = azapi
+    random    = random
+    terraform = terraform
+  }
+}
+
+run "reject_gen" {
+  command = plan
+  module {
+    source = "./modules/capacity_reservation"
+  }
+  variables {
+    role_assignments = {
+      reader = {
+        role_definition_id_or_name = "Reader"
+        principal_id               = "33333333-3333-4333-8333-333333333333"
+      }
+    }
+  }
+  expect_failures = [azapi_resource.role_assignments["reader"]]
+  providers = {
+    azapi     = azapi
+    random    = random
+    terraform = terraform
+  }
+}
+
+run "clear" {
+  command = apply
+  module {
+    source = "./modules/capacity_reservation"
   }
   providers = {
     azapi     = azapi
@@ -146,6 +175,101 @@ run "standalone_read_only_explicit_name_and_type" {
     )
     error_message = "Explicit child settings must win and tenant-level role IDs must normalize without lookup."
   }
+  providers = {
+    azapi     = azapi
+    random    = random
+    terraform = terraform
+  }
+}
+
+run "unchanged" {
+  command = plan
+  module {
+    source = "./modules/capacity_reservation"
+  }
+  variables {
+    role_assignments = {
+      reader = {
+        name                       = "33333333-3333-4333-8333-333333333333"
+        role_definition_id_or_name = "/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7"
+        principal_id               = "22222222-2222-4222-8222-222222222222"
+        principal_type             = "Group"
+      }
+    }
+  }
+  assert {
+    condition     = terraform_data.role_assignment_identity["reader"].input == local.role_assignment_identities["reader"]
+    error_message = "Unchanged effective child inputs must preserve the identity guard."
+  }
+  providers = {
+    azapi     = azapi
+    random    = random
+    terraform = terraform
+  }
+}
+
+run "principal" {
+  command = plan
+  module {
+    source = "./modules/capacity_reservation"
+  }
+  variables {
+    role_assignments = {
+      reader = {
+        name                       = "33333333-3333-4333-8333-333333333333"
+        role_definition_id_or_name = "/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7"
+        principal_id               = "44444444-4444-4444-8444-444444444444"
+        principal_type             = "Group"
+      }
+    }
+  }
+  expect_failures = [azapi_resource.role_assignments["reader"]]
+  providers = {
+    azapi     = azapi
+    random    = random
+    terraform = terraform
+  }
+}
+
+run "role" {
+  command = plan
+  module {
+    source = "./modules/capacity_reservation"
+  }
+  variables {
+    role_assignments = {
+      reader = {
+        name                       = "33333333-3333-4333-8333-333333333333"
+        role_definition_id_or_name = "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
+        principal_id               = "22222222-2222-4222-8222-222222222222"
+        principal_type             = "Group"
+      }
+    }
+  }
+  expect_failures = [azapi_resource.role_assignments["reader"]]
+  providers = {
+    azapi     = azapi
+    random    = random
+    terraform = terraform
+  }
+}
+
+run "name" {
+  command = plan
+  module {
+    source = "./modules/capacity_reservation"
+  }
+  variables {
+    role_assignments = {
+      reader = {
+        name                       = "44444444-4444-4444-8444-444444444444"
+        role_definition_id_or_name = "/providers/Microsoft.Authorization/roleDefinitions/acdd72a7-3385-48ef-bd42-f606fba81ae7"
+        principal_id               = "22222222-2222-4222-8222-222222222222"
+        principal_type             = "Group"
+      }
+    }
+  }
+  expect_failures = [azapi_resource.role_assignments["reader"]]
   providers = {
     azapi     = azapi
     random    = random
@@ -239,6 +363,43 @@ run "rejects_child_duplicate_assignment_names" {
     }
   }
   expect_failures = [azapi_resource.role_assignments]
+  providers = {
+    azapi     = azapi
+    random    = random
+    terraform = terraform
+  }
+}
+
+run "remove" {
+  command = apply
+  module {
+    source = "./modules/capacity_reservation"
+  }
+  providers = {
+    azapi     = azapi
+    random    = random
+    terraform = terraform
+  }
+}
+
+run "recreate" {
+  command = apply
+  module {
+    source = "./modules/capacity_reservation"
+  }
+  variables {
+    role_assignments = {
+      reader = {
+        role_definition_id_or_name = "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
+        principal_id               = "44444444-4444-4444-8444-444444444444"
+        principal_type             = "Group"
+      }
+    }
+  }
+  assert {
+    condition     = terraform_data.role_assignment_identity["reader"].input.principal_id == "44444444-4444-4444-8444-444444444444"
+    error_message = "A separate removal apply must permit new child role inputs."
+  }
   providers = {
     azapi     = azapi
     random    = random

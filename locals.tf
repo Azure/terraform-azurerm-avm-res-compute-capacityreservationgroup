@@ -34,6 +34,19 @@ locals {
       principal_type             = assignment.principal_type != null ? assignment.principal_type : (assignment.skip_service_principal_aad_check ? "ServicePrincipal" : null)
     })
   }
+  role_assignment_identities = {
+    for key, assignment in var.role_assignments : key => {
+      name                                   = assignment.name
+      scope                                  = lower(var.parent_id)
+      principal_id                           = lower(assignment.principal_id)
+      role_definition_id                     = lower(coalesce(local.role_definition_ids[key], "unresolved"))
+      principal_type                         = local.role_assignments[key].principal_type
+      delegated_managed_identity_resource_id = assignment.delegated_managed_identity_resource_id == null ? null : lower(assignment.delegated_managed_identity_resource_id)
+      condition                              = assignment.condition
+      condition_version                      = assignment.condition_version
+      description                            = assignment.description
+    }
+  }
   lock = var.lock == null ? null : merge(var.lock, {
     name  = coalesce(var.lock.name, "lock-${var.lock.kind}")
     notes = coalesce(var.lock.notes, var.lock.kind == "CanNotDelete" ? "Cannot delete the resource or its child resources." : "Cannot delete or modify the resource or its child resources.")

@@ -17,6 +17,18 @@ module "avm_interfaces" {
   role_assignments                          = local.role_assignments
 }
 
+# Keep the first accepted inputs so replacement cannot reuse the utility UUID
+# for a different grant. Removing the key in a separate apply resets both.
+resource "terraform_data" "role_assignment_identity" {
+  for_each = var.role_assignments
+
+  input = local.role_assignment_identities[each.key]
+
+  lifecycle {
+    ignore_changes = [input]
+  }
+}
+
 resource "azapi_resource" "role_assignments" {
   for_each = var.role_assignments
 
@@ -50,6 +62,10 @@ resource "azapi_resource" "role_assignments" {
   }
 
   lifecycle {
+    precondition {
+      condition     = terraform_data.role_assignment_identity[each.key].input == local.role_assignment_identities[each.key]
+      error_message = "Role assignment inputs cannot change under an existing key. Stage removal of applicable locks, remove this assignment key and apply, then re-add it with the new inputs and a fresh explicit GUID (or omit name). See the README staged RBAC recreation procedure."
+    }
     precondition {
       condition     = local.role_definition_ids[each.key] != null && can(provider::azapi::parse_resource_id("Microsoft.Authorization/roleDefinitions", local.role_definition_ids[each.key]))
       error_message = "The role definition name was not found at parent_id. Supply an existing role name or a fully-qualified role definition ID."
