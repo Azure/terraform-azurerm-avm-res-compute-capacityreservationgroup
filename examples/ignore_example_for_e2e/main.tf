@@ -1,31 +1,3 @@
-terraform {
-  required_version = ">= 1.9, < 2.0"
-
-  required_providers {
-    azapi = {
-      source  = "Azure/azapi"
-      version = "~> 2.12"
-    }
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 4.21"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.5"
-    }
-  }
-}
-
-provider "azapi" {
-  subscription_id = var.subscription_id
-}
-
-provider "azurerm" {
-  features {}
-  subscription_id = var.subscription_id
-}
-
 ## Section to provide a random Azure region for the resource group
 # This allows us to randomize the region for the resource group.
 module "regions" {
@@ -51,17 +23,27 @@ module "naming" {
 }
 
 # This is required for resource modules
-resource "azurerm_resource_group" "this" {
-  location = module.regions.regions[random_integer.region_index.result].name
-  name     = module.naming.resource_group.name_unique
+data "azapi_client_config" "this" {}
+
+resource "azapi_resource" "resource_group" {
+  location               = module.regions.regions[random_integer.region_index.result].name
+  name                   = module.naming.resource_group.name_unique
+  parent_id              = data.azapi_client_config.this.subscription_resource_id
+  type                   = "Microsoft.Resources/resourceGroups@2024-03-01"
+  response_export_values = []
+}
+
+moved {
+  from = azurerm_resource_group.this
+  to   = azapi_resource.resource_group
 }
 
 module "test" {
   source = "../../"
 
   capacity_reservation_group_name = "test-capacity-reservation-group"
-  location                        = azurerm_resource_group.this.location
-  resource_group_id               = azurerm_resource_group.this.id
+  location                        = azapi_resource.resource_group.location
+  parent_id                       = azapi_resource.resource_group.id
   enable_telemetry                = var.enable_telemetry
   subscription_id                 = var.subscription_id
 }

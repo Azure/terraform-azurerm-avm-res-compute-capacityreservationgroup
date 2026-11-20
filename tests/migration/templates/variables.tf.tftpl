@@ -1,0 +1,75 @@
+variable "subscription_id" {
+  type        = string
+  description = "Explicit approved single subscription."
+  nullable    = false
+}
+
+variable "tenant_id" {
+  type        = string
+  description = "Explicit approved tenant."
+  nullable    = false
+}
+
+variable "parent_id" {
+  type        = string
+  description = "Existing isolated, externally provisioned RG. This fixture never deletes it."
+  nullable    = false
+  validation {
+    condition     = can(provider::azapi::parse_resource_id("Microsoft.Resources/resourceGroups", var.parent_id))
+    error_message = "Supply an isolated resource group ARM ID."
+  }
+}
+
+variable "location" {
+  type        = string
+  description = "Approved region with quota/capacity."
+  nullable    = false
+}
+
+variable "group_name" {
+  type        = string
+  description = "Unique owned group name."
+  nullable    = false
+}
+
+variable "zone" {
+  type        = string
+  description = "Explicit approved standalone reservation and VM zone."
+  nullable    = false
+}
+
+variable "sku_name" {
+  type        = string
+  description = "Approved baseline standalone reservation/VM size."
+  nullable    = false
+}
+
+variable "fanout_sku_name" {
+  type        = string
+  description = "Distinct approved size for candidate-only fan-out, never the existing standalone size."
+  nullable    = false
+}
+
+variable "zones" {
+  type        = list(string)
+  description = "Fixed group envelope; candidate fan-out uses these zones."
+  nullable    = false
+}
+
+variable "reader_principal_id" {
+  type        = string
+  description = "Existing approved principal; no new identity or elevated role is created."
+  nullable    = false
+}
+
+variable "reader_principal_type" {
+  type        = string
+  description = "Approved User, Group or ServicePrincipal."
+  nullable    = false
+}
+
+variable "ssh_public_key" {
+  type        = string
+  default     = null
+  description = "Required real public key only for VM scenario. No key-generation response or private key logging."
+}

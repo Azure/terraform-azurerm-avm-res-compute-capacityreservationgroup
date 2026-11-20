@@ -1,0 +1,34 @@
+module "group" {
+  source = "__CANDIDATE__"
+
+  capacity_reservation_group_name = var.group_name
+  parent_id                       = var.parent_id
+  location                        = var.location
+  zones                           = var.zones
+  enable_telemetry                = __TELEMETRY__
+  lock                            = __ROOT_LOCK__
+  role_assignments = {
+    reader = {
+      role_definition_id_or_name = "Reader"
+      principal_id              = var.reader_principal_id
+      principal_type            = var.reader_principal_type
+    }
+  }
+  tags = { phase = "__TAG__" }
+  capacity_reservations = __FANOUT__
+}
+
+module "reservation" {
+  source   = "__CANDIDATE__/modules/capacity_reservation"
+  for_each = { retained = true }
+
+  parent_id                 = module.group.resource_id
+  capacity_reservation_name = "retained"
+  location                  = var.location
+  zone                      = var.zone
+  sku                       = { name = var.sku_name, capacity = 1 }
+  enable_telemetry          = __TELEMETRY__
+  tags                      = { owner = "standalone" }
+  lock                      = __CHILD_LOCK__
+  role_assignments          = __CHILD_RBAC__
+}

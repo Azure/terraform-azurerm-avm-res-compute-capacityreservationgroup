@@ -4,35 +4,9 @@
 
 This example will not be run as an e2e test as it has the .e2eignore file in the same directory.
 
+Direct resource-group scaffolding now uses AzAPI, with a declarative move from the previous AzureRM binding for an existing example state. The saved refreshed plan must preserve its ARM ID; no Azure migration of this example has been performed.
+
 ```hcl
-terraform {
-  required_version = ">= 1.9, < 2.0"
-
-  required_providers {
-    azapi = {
-      source  = "Azure/azapi"
-      version = "~> 2.12"
-    }
-    azurerm = {
-      source  = "hashicorp/azurerm"
-      version = "~> 4.21"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.5"
-    }
-  }
-}
-
-provider "azapi" {
-  subscription_id = var.subscription_id
-}
-
-provider "azurerm" {
-  features {}
-  subscription_id = var.subscription_id
-}
-
 ## Section to provide a random Azure region for the resource group
 # This allows us to randomize the region for the resource group.
 module "regions" {
@@ -58,17 +32,27 @@ module "naming" {
 }
 
 # This is required for resource modules
-resource "azurerm_resource_group" "this" {
-  location = module.regions.regions[random_integer.region_index.result].name
-  name     = module.naming.resource_group.name_unique
+data "azapi_client_config" "this" {}
+
+resource "azapi_resource" "resource_group" {
+  location               = module.regions.regions[random_integer.region_index.result].name
+  name                   = module.naming.resource_group.name_unique
+  parent_id              = data.azapi_client_config.this.subscription_resource_id
+  type                   = "Microsoft.Resources/resourceGroups@2024-03-01"
+  response_export_values = []
+}
+
+moved {
+  from = azurerm_resource_group.this
+  to   = azapi_resource.resource_group
 }
 
 module "test" {
   source = "../../"
 
   capacity_reservation_group_name = "test-capacity-reservation-group"
-  location                        = azurerm_resource_group.this.location
-  resource_group_id               = azurerm_resource_group.this.id
+  location                        = azapi_resource.resource_group.location
+  parent_id                       = azapi_resource.resource_group.id
   enable_telemetry                = var.enable_telemetry
   subscription_id                 = var.subscription_id
 }
@@ -79,11 +63,9 @@ module "test" {
 
 The following requirements are needed by this module:
 
-- <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) (>= 1.9, < 2.0)
+- <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) (>= 1.11.0, < 2.0.0)
 
 - <a name="requirement_azapi"></a> [azapi](#requirement\_azapi) (~> 2.12)
-
-- <a name="requirement_azurerm"></a> [azurerm](#requirement\_azurerm) (~> 4.21)
 
 - <a name="requirement_random"></a> [random](#requirement\_random) (~> 3.5)
 
@@ -91,8 +73,9 @@ The following requirements are needed by this module:
 
 The following resources are used by this module:
 
-- [azurerm_resource_group.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/resource_group) (resource)
+- [azapi_resource.resource_group](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/resource) (resource)
 - [random_integer.region_index](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/integer) (resource)
+- [azapi_client_config.this](https://registry.terraform.io/providers/Azure/azapi/latest/docs/data-sources/client_config) (data source)
 
 <!-- markdownlint-disable MD013 -->
 ## Required Inputs
@@ -123,7 +106,7 @@ Default: `"eastus"`
 
 ### <a name="input_subscription_id"></a> [subscription\_id](#input\_subscription\_id)
 
-Description: The subscription ID for both example providers. Null uses their normal authentication configuration.
+Description: The subscription ID for the AzAPI provider. Null uses its normal authentication configuration.
 
 Type: `string`
 
