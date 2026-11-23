@@ -39,13 +39,19 @@ locals {
       name                                   = assignment.name
       scope                                  = lower(var.parent_id)
       principal_id                           = lower(assignment.principal_id)
-      role_definition_id                     = lower(coalesce(local.role_definition_ids[key], "unresolved"))
+      role_definition_id_or_name             = lower(assignment.role_definition_id_or_name)
       principal_type                         = local.role_assignments[key].principal_type
       delegated_managed_identity_resource_id = assignment.delegated_managed_identity_resource_id == null ? null : lower(assignment.delegated_managed_identity_resource_id)
       condition                              = assignment.condition
       condition_version                      = assignment.condition_version
       description                            = assignment.description
     }
+  }
+  # Pre-release guard state stored the resolved ID. Keep its comparison contract
+  # without migrating or discarding the frozen grant identity.
+  role_assignment_non_role_identities = {
+    for key, identity in local.role_assignment_identities : key =>
+    { for field, value in identity : field => value if field != "role_definition_id_or_name" }
   }
   lock = var.lock == null ? null : merge(var.lock, {
     name  = coalesce(var.lock.name, "lock-${var.lock.kind}")

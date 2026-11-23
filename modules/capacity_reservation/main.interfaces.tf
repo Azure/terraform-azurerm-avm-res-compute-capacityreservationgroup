@@ -40,8 +40,10 @@ resource "azapi_resource" "role_assignments" {
   ignore_casing        = true
   ignore_null_property = true
   replace_triggers_external_values = {
-    principal_id                           = lower(each.value.principal_id)
-    role_definition_id                     = lower(coalesce(local.role_definition_ids[each.key], "unresolved"))
+    principal_id = lower(each.value.principal_id)
+    # Use configured input, or the frozen trigger for old pre-release guards;
+    # neither becomes unknown when module depends_on defers the role lookup.
+    role_definition_id                     = can(terraform_data.role_assignment_identity[each.key].input.role_definition_id_or_name) ? lower(each.value.role_definition_id_or_name) : terraform_data.role_assignment_identity[each.key].input.role_definition_id
     principal_type                         = local.role_assignments[each.key].principal_type
     delegated_managed_identity_resource_id = each.value.delegated_managed_identity_resource_id
     condition                              = each.value.condition
@@ -63,7 +65,12 @@ resource "azapi_resource" "role_assignments" {
 
   lifecycle {
     precondition {
-      condition     = terraform_data.role_assignment_identity[each.key].input == local.role_assignment_identities[each.key]
+      condition = can(terraform_data.role_assignment_identity[each.key].input.role_definition_id_or_name) ? (
+        terraform_data.role_assignment_identity[each.key].input == local.role_assignment_identities[each.key]
+        ) : (
+        { for field, value in terraform_data.role_assignment_identity[each.key].input : field => value if field != "role_definition_id" } == local.role_assignment_non_role_identities[each.key] &&
+        terraform_data.role_assignment_identity[each.key].input.role_definition_id == lower(coalesce(local.role_definition_ids[each.key], "unresolved"))
+      )
       error_message = "Role assignment inputs cannot change under an existing key. Stage removal of applicable locks, remove this assignment key and apply, then re-add it with the new inputs and a fresh explicit GUID (or omit name). See the README staged RBAC recreation procedure."
     }
     precondition {

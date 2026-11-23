@@ -102,7 +102,9 @@ The [external staged migration fixtures](tests/migration/\_header.md) cover enab
 
 ### Staged RBAC recreation
 
-The root and reservation submodule retain the first accepted effective assignment inputs in local-only `terraform_data.role_assignment_identity["<key>"]` state. This deliberately requires staged recreation for assignment edits; the utility's UUID has no identity keepers. Case-equivalent principal/role IDs and an equivalent resolved role name/ID do not constitute a new grant.
+The root and reservation submodule retain the first accepted assignment inputs in local-only `terraform_data.role_assignment_identity["<key>"]` state. This deliberately requires staged recreation for assignment edits; the utility's UUID has no identity keepers. New guards and replacement triggers use the lowercased configured `role_definition_id_or_name`, not the looked-up role ID. Case-only principal/role changes do not constitute a new grant; switching a configured role name to an ID requires staged recreation.
+
+Existing pre-release resolved-ID guards retain their frozen trigger value and resolved-role comparison without state edits or GUID changes. A module-level `depends_on` can defer named-role lookup until apply, but that lookup alone must not replace the assignment. The write body still uses the resolved ARM role definition ID, never the configured role name.
 
 1. Arrange independent access: removing a grant creates an authorization gap. Remove **all applicable** CanNotDelete/ReadOnly locks in a separate approved apply and wait for propagation.
 2. Remove the assignment key from the owning `role_assignments` map and apply. Verify that the assignment, its identity guard and its utility `random_uuid.role_assignment_name` instance are gone. Do not merely rename the key in one plan, taint the assignment/guard, or edit state to bypass the check.

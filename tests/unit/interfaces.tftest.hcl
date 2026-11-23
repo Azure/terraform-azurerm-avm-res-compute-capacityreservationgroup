@@ -106,6 +106,13 @@ run "combined_rg_extensions_and_sharing" {
   }
   assert {
     condition = (
+      azapi_resource.role_assignments["reader"].replace_triggers_external_values.role_definition_id == "reader" &&
+      terraform_data.role_assignment_identity["reader"].input.role_definition_id_or_name == "reader"
+    )
+    error_message = "The replacement trigger and new identity guard must use lowercased configured input, not the resolved ARM role ID."
+  }
+  assert {
+    condition = (
       azapi_resource.this.body.properties.sharingProfile.subscriptionIds[0].id == "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb" &&
       azapi_resource.this.body.zones[0] == "1" &&
       azapi_resource.this.tags.environment == "unit" &&

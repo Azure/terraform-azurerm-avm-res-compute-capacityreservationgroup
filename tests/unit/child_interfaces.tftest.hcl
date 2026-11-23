@@ -93,6 +93,13 @@ run "standalone_child_scoped_extensions" {
   }
   assert {
     condition = (
+      azapi_resource.role_assignments["reader"].replace_triggers_external_values.role_definition_id == "reader" &&
+      terraform_data.role_assignment_identity["reader"].input.role_definition_id_or_name == "reader"
+    )
+    error_message = "Child replacement trigger and new identity guard must use lowercased configured input, not the resolved ARM role ID."
+  }
+  assert {
+    condition = (
       azapi_resource.lock[0].type == var.resource_types.authorization_locks &&
       azapi_resource.role_assignments["reader"].type == var.resource_types.authorization_role_assignments &&
       data.azapi_resource_list.role_definitions[0].type == var.resource_types.authorization_role_definitions &&
