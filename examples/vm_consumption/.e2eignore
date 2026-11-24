@@ -1,0 +1,7 @@
+Temporarily excluded from automated E2E deployment because VM AVM 0.22.0
+reproduces case-only drift in the VM capacity reservation group ARM ID.
+Deployment and association succeed, but normal refreshed plans are not no-ops.
+Retain this example and its unit coverage for manual reproduction; do not
+normalize IDs or ignore the association property to manufacture convergence.
+Remove this marker after the upstream behavior is resolved and an approved
+live run verifies deployment, two refreshed no-ops and normal cleanup.

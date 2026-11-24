@@ -1,0 +1,7 @@
+output "identities" {
+  value = {
+    group_id = module.group.resource_id
+    child_id = module.reservation["retained"].resource_id
+    platform_id = module.reservation["retained"].capacity_reservation_id
+  }
+}

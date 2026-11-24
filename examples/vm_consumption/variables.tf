@@ -1,0 +1,76 @@
+variable "association_change_approved" {
+  type        = bool
+  default     = false
+  description = "Acknowledgement that an existing VM was deallocated and its association change separately approved. Not a deallocation operation or Azure-state assertion. Required with capacity_reservation_enabled = false."
+  nullable    = false
+}
+
+variable "capacity_reservation_enabled" {
+  type        = bool
+  default     = true
+  description = "Explicit upstream VM-module opt-in using the group ARM ID directly. False passes null to capacity_reservation_group_resource_id; it does NOT remove or stop billing the reservation. Deallocate first and explicitly set association_change_approved for an existing VM; prove actual clearing with readback."
+  nullable    = false
+
+  validation {
+    condition     = var.capacity_reservation_enabled || var.association_change_approved
+    error_message = "Disassociation requires explicit association_change_approved after the approved deallocation/readback stage."
+  }
+}
+
+variable "enable_telemetry" {
+  type        = bool
+  default     = true
+  description = "Enable AVM telemetry."
+  nullable    = false
+}
+
+variable "location" {
+  type        = string
+  default     = "eastus"
+  description = "Approved region with quota, capacity and the selected VM image/size/zone available."
+  nullable    = false
+}
+
+variable "reservation_capacity" {
+  type        = number
+  default     = 1
+  description = "Reserved VM quantity, normally one for this single-VM test. Zero is available for the documented staged disassociation workflow, not a capacity guarantee."
+  nullable    = false
+}
+
+variable "resource_group_name" {
+  type        = string
+  default     = null
+  description = "Explicit name for an isolated example resource group. Null uses the naming module's resource_group.name_unique with a random suffix. Preserve an existing deployment's actual name when upgrading this example."
+}
+
+variable "ssh_public_key" {
+  type        = string
+  default     = null
+  description = "Optional real RSA SSH public key (at least 2048 bits). Null generates a throwaway 3072-bit RSA key through Azure; only the public key is exported to state and the private key is deliberately discarded. No password or placeholder credential is used."
+}
+
+variable "subscription_id" {
+  type        = string
+  default     = null
+  description = "AzAPI subscription; null uses normal provider authentication configuration (CLI or ARM_* / OIDC)."
+}
+
+variable "vm_size" {
+  type        = string
+  default     = "Standard_D2s_v5"
+  description = "CapacityReservationSupported VM size compatible with the x64 Gen2 Ubuntu image and Trusted Launch; used identically by VM and reservation. Verify live region/zone eligibility and quota before applying."
+  nullable    = false
+}
+
+variable "zone" {
+  type        = string
+  default     = "1"
+  description = "Explicit example zone, shared by VM, group envelope and reservation. Override for the approved target. This is an example selection, not a reusable child-module default."
+  nullable    = false
+
+  validation {
+    condition     = contains(["1", "2", "3"], var.zone)
+    error_message = "Choose one logical zone from 1, 2 and 3."
+  }
+}

@@ -4,6 +4,14 @@
 
 This deploys the module in its simplest form.
 
+The resource group uses the naming module's `resource_group.name_unique`, including its state-stable random suffix. The regions utility reads live subscription location data and filters to recommended regions with availability zones; a random index selects the deployment region. `location` is the utility's telemetry location, not a deployment-region override. Live data changes can change that index's effective region; inspect existing-state plans for replacement before applying.
+
+The standalone reservation explicitly receives one `zone`, also passed as the group envelope. Choose an approved `vm_size` and `zone`; the example default is one fixed `Standard_D2s_v5` slot, not a randomly selected SKU. The region filters do not check compute SKU restrictions, quota, selected-zone support or available capacity. Use the complete example with an explicit approved location when a fixed target is required. Reserved capacity is billable even when unused. When upgrading an already-applied older example, explicitly preserve its actual size/zone rather than accepting changed example defaults as a nondestructive upgrade.
+
+Group and standalone-reservation operations retry only the nested-resource deletion message, with an initial 15-second interval, a 60-second maximum interval and a 10-minute delete timeout. This accommodates propagation delays, not persistent child resources or failed-create orphans outside Terraform state. Those require inspection and scoped recovery; retries do not prove cleanup.
+
+All direct Azure scaffolding uses AzAPI. If upgrading an already-applied v0.2.0 example in the same state, the example includes a move from its old AzureRM resource group binding to the AzAPI binding. Inspect the saved refreshed plan and preserve the resource group ID; do not approve a resource group deletion/replacement. This path remains untested against Azure.
+
 ```hcl
 ## Section to provide a random Azure region for the resource group
 # This allows us to randomize the region for the resource group.
@@ -11,14 +19,24 @@ module "regions" {
   source  = "Azure/avm-utl-regions/azurerm"
   version = "0.13.0"
 
-  location         = var.location
-  enable_telemetry = var.enable_telemetry
+  location               = var.location
+  enable_telemetry       = var.enable_telemetry
+  has_availability_zones = true
+  is_recommended         = true
+  use_cached_data        = false
 }
 
 # This allows us to randomize the region for the resource group.
 resource "random_integer" "region_index" {
   max = length(module.regions.regions) - 1
   min = 0
+
+  lifecycle {
+    precondition {
+      condition     = length(module.regions.regions) > 0
+      error_message = "The subscription exposes no recommended regions with availability zones."
+    }
+  }
 }
 
 ## End of section to provide a random Azure region for the resource group
@@ -30,9 +48,19 @@ module "naming" {
 }
 
 # This is required for resource modules
-resource "azurerm_resource_group" "this" {
-  location = module.regions.regions[random_integer.region_index.result].name
-  name     = module.naming.resource_group.name_unique
+data "azapi_client_config" "this" {}
+
+resource "azapi_resource" "resource_group" {
+  location               = module.regions.regions[random_integer.region_index.result].name
+  name                   = module.naming.resource_group.name_unique
+  parent_id              = data.azapi_client_config.this.subscription_resource_id
+  type                   = "Microsoft.Resources/resourceGroups@2024-03-01"
+  response_export_values = []
+}
+
+moved {
+  from = azurerm_resource_group.this
+  to   = azapi_resource.resource_group
 }
 
 # This is the module call for capacity reservation group
@@ -40,24 +68,29 @@ module "capacity_reservation_group" {
   source = "../../"
 
   capacity_reservation_group_name = local.capacity_reservation_group_name
-  location                        = azurerm_resource_group.this.location
-  resource_group_id               = azurerm_resource_group.this.id
+  location                        = azapi_resource.resource_group.location
+  parent_id                       = azapi_resource.resource_group.id
   enable_telemetry                = var.enable_telemetry
+  retry                           = local.retry
   subscription_id                 = var.subscription_id
   tags                            = local.tags
+  timeouts                        = { delete = "10m" }
+  zones                           = [local.zone]
 }
 
 # This is the module call for capacity reservation
 module "capacity_reservation" {
   source = "../../modules/capacity_reservation"
 
-  capacity_reservation_group_id = module.capacity_reservation_group.capacity_reservation_group_id
-  capacity_reservation_name     = local.capacity_reservation_name
-  location                      = azurerm_resource_group.this.location
-  sku                           = local.sku
-  enable_telemetry              = var.enable_telemetry
-  tags                          = local.tags
-  zones                         = local.zones
+  capacity_reservation_name = local.capacity_reservation_name
+  location                  = azapi_resource.resource_group.location
+  parent_id                 = module.capacity_reservation_group.capacity_reservation_group_id
+  sku                       = local.sku
+  zone                      = local.zone
+  enable_telemetry          = var.enable_telemetry
+  retry                     = local.retry
+  tags                      = local.tags
+  timeouts                  = { delete = "10m" }
 }
 ```
 
@@ -66,11 +99,9 @@ module "capacity_reservation" {
 
 The following requirements are needed by this module:
 
-- <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) (>= 1.9, < 2.0)
+- <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) (>= 1.11.0, < 2.0.0)
 
 - <a name="requirement_azapi"></a> [azapi](#requirement\_azapi) (~> 2.12)
-
-- <a name="requirement_azurerm"></a> [azurerm](#requirement\_azurerm) (~> 4.0)
 
 - <a name="requirement_random"></a> [random](#requirement\_random) (~> 3.5)
 
@@ -78,8 +109,9 @@ The following requirements are needed by this module:
 
 The following resources are used by this module:
 
-- [azurerm_resource_group.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/resource_group) (resource)
+- [azapi_resource.resource_group](https://registry.terraform.io/providers/Azure/azapi/latest/docs/resources/resource) (resource)
 - [random_integer.region_index](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/integer) (resource)
+- [azapi_client_config.this](https://registry.terraform.io/providers/Azure/azapi/latest/docs/data-sources/client_config) (data source)
 
 <!-- markdownlint-disable MD013 -->
 ## Required Inputs
@@ -102,7 +134,7 @@ Default: `true`
 
 ### <a name="input_location"></a> [location](#input\_location)
 
-Description: The Azure region for this module's resources or telemetry deployment.
+Description: Telemetry location for the regions utility. Deployment location is randomly selected from live subscription regions filtered to recommended regions with availability zones; this input does not pin that selection.
 
 Type: `string`
 
@@ -110,11 +142,27 @@ Default: `"eastus"`
 
 ### <a name="input_subscription_id"></a> [subscription\_id](#input\_subscription\_id)
 
-Description: The subscription ID for both example providers. Null uses their normal authentication configuration.
+Description: The subscription ID for the AzAPI provider. Null uses its normal authentication configuration.
 
 Type: `string`
 
 Default: `null`
+
+### <a name="input_vm_size"></a> [vm\_size](#input\_vm\_size)
+
+Description: Capacity-reservation-supported VM size with approved quota and capacity in the selected region/zone; verify live eligibility before deployment.
+
+Type: `string`
+
+Default: `"Standard_D2s_v5"`
+
+### <a name="input_zone"></a> [zone](#input\_zone)
+
+Description: Approved logical zone used by both the group envelope and standalone single-reservation submodule.
+
+Type: `string`
+
+Default: `"1"`
 
 ## Outputs
 

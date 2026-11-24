@@ -18,5 +18,5 @@ variable "location" {
 variable "subscription_id" {
   type        = string
   default     = null
-  description = "The subscription ID for both example providers. Null uses their normal authentication configuration."
+  description = "The subscription ID for the AzAPI provider. Null uses its normal authentication configuration."
 }
